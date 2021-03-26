@@ -1,9 +1,6 @@
-# -*- coding: utf-8 -*-
-
 import re
 
 from setuptools import find_packages, setup
-
 
 with open("wabucketref/__init__.py") as f:
     txt = f.read()
@@ -21,9 +18,13 @@ setup(
         "cloudpathlib[s3]==0.4.0",
     ],
     include_package_data=True,
-    description="Run experiments, track artifacts via WandB, store artifacts in bucket and refer them in WandB",
+    description=(
+        "Run experiments, "
+        "track artifacts via WandB, "
+        "store artifacts in bucket and refer them in WandB"
+    ),
     packages=find_packages(),
     # entry_points={
-        # "console_scripts": []  # todo: add cli support
+    # "console_scripts": []  # todo: add cli support
     # },
 )
