@@ -95,13 +95,13 @@ class WaBucketRefAPI:
             raise RuntimeError(f"Failed to initialize W&B run, got: {wandb_run:r}")
         return wandb_run
 
-    def _s3_upload_artifact(self, path: Path, bucket_root: cpl.S3Path) -> None:
+    def _s3_upload_artifact(self, path: Path, root: cpl.S3Path) -> None:
         if path.is_file():
-            (bucket_root / str(path)).write_bytes(path.read_bytes())
+            (root / str(path.name)).write_bytes(path.read_bytes())
         elif path.is_dir():
-            (bucket_root / str(path)).mkdir(parents=True, exist_ok=True)
-            for x in path.rglob("*"):
-                self._s3_upload_artifact(x, bucket_root)
+            (root / str(path.name)).mkdir(parents=True, exist_ok=True)
+            for x in path.glob("*"):
+                self._s3_upload_artifact(x, root / path.name)
         else:
             raise TypeError(f"{path} is not a dir nor file.")
 
