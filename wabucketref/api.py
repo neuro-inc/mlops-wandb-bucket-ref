@@ -7,7 +7,7 @@ from typing import Dict, Optional
 
 import cloudpathlib as cpl
 import wandb
-from wandb.wandb_run import Run as Run
+from wandb.wandb_run import Run
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -16,18 +16,21 @@ logging.basicConfig(level=logging.INFO)
 class WaBucketRefAPI:
     def __init__(
         self,
-        bucket_name: str,
+        bucket: Optional[str] = None,
         project_name: Optional[str] = None,
         endpoint_url: Optional[str] = None,
         aws_access_key_id: Optional[str] = None,
         aws_secret_access_key: Optional[str] = None,
         region_name: Optional[str] = None,
     ):
+        # W&B related fields
+        self._wab_project_name = project_name or os.environ["WANDB_PROJECT"]
+
         # S3 related fields
-        self._bucket_name = bucket_name
-        self._s3_key_id = os.environ.get("AWS_ACCESS_KEY_ID") or aws_access_key_id
-        self._s3_access_key = (
-            os.environ.get("AWS_SECRET_ACCESS_KEY") or aws_secret_access_key
+        bucket_name = bucket or f"s3://{self._wab_project_name}"
+        self._s3_key_id = aws_access_key_id or os.environ.get("AWS_ACCESS_KEY_ID")
+        self._s3_access_key = aws_secret_access_key or os.environ.get(
+            "AWS_SECRET_ACCESS_KEY"
         )
         # TODO: wait until release of a new version
         # self._s3_endpoint_url = os.environ.get("AWS_S3_ENDPOINT_URL") or endpoint_url
@@ -36,11 +39,7 @@ class WaBucketRefAPI:
             aws_secret_access_key=self._s3_access_key,
             # endpoint_url=self._s3_endpoint_url,
         )
-        self._s3_bucket = self._s3_client.CloudPath(f"s3://{self._bucket_name}")
-        # W&B related fields
-        self._wab_project_name = (
-            project_name or os.environ.get("WANDB_PROJECT") or bucket_name
-        )
+        self._s3_bucket = self._s3_client.CloudPath(bucket_name)
 
     def upload_artifact(
         self,
