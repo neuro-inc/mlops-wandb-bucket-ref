@@ -43,7 +43,7 @@ class WaBucketRefAPI:
 
     def upload_artifact(
         self,
-        local_path: Path,
+        local_folder: Path,
         w_name: str,
         w_type: str,
         w_metadata: Optional[Dict] = None,
@@ -56,14 +56,16 @@ class WaBucketRefAPI:
         artifact = wandb.Artifact(name=w_name, type=w_type, metadata=w_metadata)
         artifact_alias = self._args_to_alias(run_args)
         if as_refference:
-            logger.info(f"Uploading artifact from '{str(local_path)}' as reference...")
-            art_cpl_ref = self._s3_bucket / w_type / w_name / artifact_alias
-            self._s3_upload_artifact(local_path, art_cpl_ref)
-            logger.info(f"Artifact uploaded to {art_cpl_ref}")
-            artifact.add_reference(uri=str(art_cpl_ref))
+            logger.info(f"Uploading artifact from '{local_folder}' as reference...")
+            artifact_remote_root = self._s3_bucket / w_type / w_name / artifact_alias
+            for file_ in local_folder.glob("*"):
+                self._s3_upload_artifact(file_, artifact_remote_root)
+            self._s3_upload_artifact(local_folder, artifact_remote_root)
+            logger.info(f"Artifact uploaded to {artifact_remote_root}")
+            artifact.add_reference(uri=str(artifact_remote_root))
         else:
-            logger.info(f"Uploading artifact {str(local_path)} as directory...")
-            artifact.add_dir(str(local_path))
+            logger.info(f"Uploading artifact {local_folder} as directory...")
+            artifact.add_dir(str(local_folder))
         wandb.log_artifact(artifact, aliases=[artifact_alias])
         return artifact_alias
 
