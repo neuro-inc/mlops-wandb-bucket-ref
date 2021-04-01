@@ -121,16 +121,14 @@ class WaBucketRefAPI:
     def download_artifact(
         self,
         local_path: Path,
-        w_name: str,
-        w_type: str,
-        as_refference: bool = True,
+        art_name: str,
+        art_type: str,
+        art_alias: str,
         run_args: Optional[argparse.Namespace] = None,
-    ) -> None:
-        # pass run args to calculate artifact alias
-        # TODO: refactor this since no single responcibility
+    ) -> str:
         self._wandb_init_if_needed(run_args)
-        artifact_alias = self._args_to_alias(run_args)
         artifact = wandb.use_artifact(
-            artifact_or_name=f"{w_name}:{artifact_alias}", type=w_type
+            artifact_or_name=f"{art_name}:{art_alias}", type=art_type
         )
-        artifact.download(root=local_path)
+        art_path: str = artifact.download(root=local_path)
+        return art_path
