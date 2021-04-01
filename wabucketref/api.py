@@ -49,7 +49,7 @@ class WaBucketRefAPI:
         w_metadata: Optional[Dict] = None,
         as_refference: bool = True,
         run_args: Optional[argparse.Namespace] = None,
-    ) -> None:
+    ) -> str:
         # pass "run_args" to calculate artifact alias
         # TODO: refactor this since no single responcibility
         self._wandb_init_if_needed(run_args)
@@ -65,6 +65,7 @@ class WaBucketRefAPI:
             logger.info(f"Uploading artifact {str(local_path)} as directory...")
             artifact.add_dir(str(local_path))
         wandb.log_artifact(artifact, aliases=[artifact_alias])
+        return artifact_alias
 
     def _wandb_init_if_needed(self, run_args: Optional[argparse.Namespace] = None):
         if wandb.run is None:
