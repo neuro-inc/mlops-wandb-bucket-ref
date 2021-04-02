@@ -61,7 +61,6 @@ class WaBucketRefAPI:
             artifact_remote_root = self._s3_bucket / w_type / w_name / artifact_alias
             for file_ in src_folder.glob("*"):
                 self._s3_upload_artifact(file_, artifact_remote_root)
-            self._s3_upload_artifact(src_folder, artifact_remote_root)
             logger.info(f"Artifact uploaded to {artifact_remote_root}")
             artifact.add_reference(uri=str(artifact_remote_root))
         else:
