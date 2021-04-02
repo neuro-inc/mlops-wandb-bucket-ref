@@ -2,6 +2,7 @@ import argparse
 import hashlib
 import logging
 import os
+import tempfile
 from pathlib import Path
 from typing import Dict, Optional
 
@@ -43,7 +44,7 @@ class WaBucketRefAPI:
 
     def upload_artifact(
         self,
-        local_folder: Path,
+        src_folder: Path,
         w_name: str,
         w_type: str,
         w_metadata: Optional[Dict] = None,
@@ -54,18 +55,18 @@ class WaBucketRefAPI:
         # TODO: refactor this since no single responcibility
         self._wandb_init_if_needed(run_args)
         artifact = wandb.Artifact(name=w_name, type=w_type, metadata=w_metadata)
-        artifact_alias = self._args_to_alias(run_args)
+        artifact_alias = self._wandb_run_config_to_alias()
         if as_refference:
-            logger.info(f"Uploading artifact from '{local_folder}' as reference...")
+            logger.info(f"Uploading artifact from '{src_folder}' as reference...")
             artifact_remote_root = self._s3_bucket / w_type / w_name / artifact_alias
-            for file_ in local_folder.glob("*"):
+            for file_ in src_folder.glob("*"):
                 self._s3_upload_artifact(file_, artifact_remote_root)
-            self._s3_upload_artifact(local_folder, artifact_remote_root)
+            self._s3_upload_artifact(src_folder, artifact_remote_root)
             logger.info(f"Artifact uploaded to {artifact_remote_root}")
             artifact.add_reference(uri=str(artifact_remote_root))
         else:
-            logger.info(f"Uploading artifact {local_folder} as directory...")
-            artifact.add_dir(str(local_folder))
+            logger.info(f"Uploading artifact {src_folder} as directory...")
+            artifact.add_dir(str(src_folder))
         wandb.log_artifact(artifact, aliases=[artifact_alias])
         return artifact_alias
 
@@ -107,30 +108,32 @@ class WaBucketRefAPI:
         else:
             raise TypeError(f"{path} is not a dir nor file.")
 
-    def _args_to_alias(self, args: Optional[argparse.Namespace] = None) -> str:
-        if args:
+    def _wandb_run_config_to_alias(self) -> str:
+        if wandb.run and wandb.run.config:
             run_config = {}
-            for key in vars(args):
-                run_config[key] = str(getattr(args, key))
+            for key in vars(wandb.run.config):
+                run_config[key] = str(getattr(wandb.run.config, key))
             run_config_str = " ".join(
                 [f"{key}={value}" for key, value in sorted(run_config.items())]
             )
-            artifact_alias = hashlib.sha256(run_config_str.encode("UTF-8")).hexdigest()
+            alias = hashlib.sha256(run_config_str.encode("UTF-8")).hexdigest()
         else:
-            artifact_alias = "latest"
-        return artifact_alias
+            alias = "latest"
+        return alias
 
     def download_artifact(
         self,
-        local_path: Path,
         art_name: str,
         art_type: str,
         art_alias: str,
+        dst_folder: Optional[Path] = None,
         run_args: Optional[argparse.Namespace] = None,
     ) -> str:
         self._wandb_init_if_needed(run_args)
         artifact = wandb.use_artifact(
             artifact_or_name=f"{art_name}:{art_alias}", type=art_type
         )
-        art_path: str = artifact.download(root=local_path)
+        if dst_folder is None:
+            dst_folder = Path(tempfile.mkdtemp())
+        art_path: str = artifact.download(root=dst_folder)
         return art_path
