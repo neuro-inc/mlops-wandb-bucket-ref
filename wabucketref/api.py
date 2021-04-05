@@ -67,6 +67,11 @@ class WaBucketRefAPI:
             logger.info(f"Uploading artifact {src_folder} as directory...")
             artifact.add_dir(str(src_folder))
         wandb.log_artifact(artifact, aliases=[artifact_alias])
+
+        # neuro-flow reads ::set-output... if only they are at the beginning of a string
+        print(f"::set-output name=artifact_name::{w_name}")
+        print(f"::set-output name=artifact_type::{w_type}")
+        print(f"::set-output name=artifact_alias::{artifact_alias}")
         return artifact_alias
 
     def _wandb_init_if_needed(self, run_args: Optional[argparse.Namespace] = None):
