@@ -24,7 +24,6 @@ setup(
         "store artifacts in bucket and refer them in WandB"
     ),
     packages=find_packages(),
-    # entry_points={
-    # "console_scripts": []  # todo: add cli support
-    # },
+    entry_points={"console_scripts": ["wabucket=wabucketref.cli:main"]},
+    zip_safe=False,
 )

@@ -10,3 +10,8 @@ lint: format
 .PHONY: format
 format:
 	pre-commit run --all-files --show-diff-on-failure
+
+.PHONY: image
+image:
+	git push
+	neuro-extras image build . image:wabucketref -F --build-arg COMMIT_SHA=${git rev-parse HEAD}
