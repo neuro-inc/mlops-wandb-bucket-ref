@@ -7,9 +7,9 @@ from pathlib import Path
 from typing import Dict, Optional, Union
 
 import cloudpathlib as cpl
+from wandb.wandb_run import Run
 
 import wandb
-from wandb import Artifact, Run
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -136,7 +136,7 @@ class WaBucketRefAPI:
         run_args: Optional[RunArgsType] = None,
     ) -> str:
         self._wandb_init_if_needed(run_args)
-        artifact: Artifact = wandb.use_artifact(
+        artifact: wandb.Artifact = wandb.use_artifact(
             artifact_or_name=f"{art_name}:{art_alias}", type=art_type
         )
         if dst_folder is None:
