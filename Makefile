@@ -14,4 +14,4 @@ format:
 .PHONY: image
 image:
 	git push
-	neuro-extras image build . image:wabucketref -F --build-arg COMMIT_SHA=${git rev-parse HEAD}
+	neuro-extras image build . image:wabucketref -F --build-arg COMMIT_SHA=$(shell git rev-parse HEAD)
