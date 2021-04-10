@@ -35,6 +35,11 @@ from . import WaBucketRefAPI, __version__, parse_meta
     help="Bucket service secret access key, assotiated with the provided access key ID",
 )
 @click.option(
+    "--aws-credentials-file",
+    type=str,
+    help="Path to the credentials file for accessing S3 bucket.",
+)
+@click.option(
     "--region-name",
     type=str,
     help="Region, where S3 bucket is located",
@@ -47,6 +52,7 @@ def main(
     endpoint_url: Optional[str],
     aws_access_key_id: Optional[str],
     aws_secret_access_key: Optional[str],
+    aws_credentials_file: Optional[str],
     region_name: Optional[str],
 ) -> None:
     """
@@ -59,6 +65,7 @@ def main(
             "endpoint_url": endpoint_url,
             "aws_access_key_id": aws_access_key_id,
             "aws_secret_access_key": aws_secret_access_key,
+            "aws_credentials_file": aws_credentials_file,
             "region_name": region_name,
         },
     }
