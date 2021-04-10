@@ -18,16 +18,13 @@ def parse_meta(meta: Sequence[str]) -> Dict:
 
 @contextmanager
 def switched_aws_cfg(creds_file_env: Optional[str]) -> None:
-    if creds_file_env:
-        try:
-            switch_back = None
-            if os.environ.get("AWS_SHARED_CREDENTIALS_FILE"):
-                # later we need to switch it back
-                switch_back = os.environ.pop("AWS_SHARED_CREDENTIALS_FILE")
+    try:
+        switch_back = os.environ.get("AWS_SHARED_CREDENTIALS_FILE")
+        if creds_file_env:
             os.environ["AWS_SHARED_CREDENTIALS_FILE"] = creds_file_env
-            yield
-        finally:
-            if switch_back is not None:
-                os.environ["AWS_SHARED_CREDENTIALS_FILE"] = switch_back
-            else:
-                os.environ.pop("AWS_SHARED_CREDENTIALS_FILE")
+        yield
+    finally:
+        if switch_back is not None:
+            os.environ["AWS_SHARED_CREDENTIALS_FILE"] = switch_back
+        else:
+            os.environ.pop("AWS_SHARED_CREDENTIALS_FILE")
