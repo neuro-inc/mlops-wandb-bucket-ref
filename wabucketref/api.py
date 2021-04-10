@@ -77,7 +77,7 @@ class WaBucketRefAPI:
             logger.info(
                 f"Uploading artifact from '{src_folder}' to {artifact_remote_root} ..."
             )
-            with switched_aws_cfg(self.aws_secret_access_key):
+            with switched_aws_cfg(self._s3_credentials_file):
                 for file_ in src_folder.glob("*"):
                     self._s3_upload_artifact(file_, artifact_remote_root)
                 logger.info(f"Artifact uploaded to {artifact_remote_root}")
@@ -109,7 +109,7 @@ class WaBucketRefAPI:
         if wandb.run is not None:
             raise RuntimeError(f"W&B has registerred run {wandb.run.name}")
 
-        with switched_aws_cfg(self.aws_secret_access_key):
+        with switched_aws_cfg(self._s3_credentials_file):
             wandb_run = wandb.init(
                 project=self._wab_project_name,
                 name=w_run_name,
@@ -155,6 +155,6 @@ class WaBucketRefAPI:
         )
         if dst_folder is None:
             dst_folder = Path(tempfile.mkdtemp())
-        with switched_aws_cfg(self.aws_secret_access_key):
+        with switched_aws_cfg(self._s3_credentials_file):
             art_path: str = artifact.download(root=dst_folder)
         return art_path
