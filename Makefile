@@ -1,3 +1,5 @@
+CURRENT_COMMIT = $(shell git rev-parse HEAD)
+
 .PHONY: setup
 setup:
 	pip install -r requirements/python-dev.txt
@@ -14,4 +16,4 @@ format:
 .PHONY: image
 image:
 	git push
-	neuro-extras image build . image:wabucketref -F --build-arg COMMIT_SHA=$(shell git rev-parse HEAD)
+	neuro-extras image build . image:wabucketref:$(CURRENT_COMMIT) --build-arg COMMIT_SHA=$(CURRENT_COMMIT)

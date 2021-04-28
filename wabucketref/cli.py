@@ -20,6 +20,16 @@ from . import WaBucketRefAPI, __version__, parse_meta
     help="W&B project name, which should be used",
 )
 @click.option(
+    "--run-name",
+    type=str,
+    help="W&B human-readable run name to distinguish among other runs",
+)
+@click.option(
+    "--job-type",
+    type=str,
+    help="W&B human-readable job type to group similar jobs together in the reports",
+)
+@click.option(
     "--endpoint-url",
     type=str,
     help="S3 bucket service endpoint URL",
@@ -49,6 +59,8 @@ def main(
     ctx: Context,
     bucket: Optional[str],
     project_name: Optional[str],
+    run_name: Optional[str],
+    job_type: Optional[str],
     endpoint_url: Optional[str],
     aws_access_key_id: Optional[str],
     aws_secret_access_key: Optional[str],
@@ -67,6 +79,10 @@ def main(
             "aws_secret_access_key": aws_secret_access_key,
             "aws_credentials_file": aws_credentials_file,
             "region_name": region_name,
+        },
+        "run_params": {
+            "w_run_name": run_name,
+            "w_job_type": job_type,
         },
     }
 
@@ -130,6 +146,11 @@ def upload(
     """
     ref_api = WaBucketRefAPI(**ctx.obj["init_params"])
     meta = parse_meta(metadata)
+    ref_api.wandb_start_run(
+        w_run_name="texture-expand",
+        w_job_type="generate-dataset",
+        run_args=run_args,
+    )
 
     ref_api.upload_artifact(
         src_folder=Path(src_dir),
@@ -137,7 +158,6 @@ def upload(
         art_type=type_,
         art_metadata=meta,
         as_refference=reff,
-        run_args=run_args,
     )
 
 
@@ -185,10 +205,14 @@ def download(
             f"{destination_folder} is not a directory, but {type(destination_folder)}. "
             "Unable to download artifact there."
         )
+    ref_api.wandb_start_run(
+        w_run_name="texture-expand",
+        w_job_type="generate-dataset",
+        run_args=run_args,
+    )
     ref_api.download_artifact(
         art_name=artifact_name,
         art_type=artifact_type,
         art_alias=artifact_alias,
         dst_folder=destination_folder,
-        run_args=run_args,
     )
