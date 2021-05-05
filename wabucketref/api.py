@@ -88,9 +88,21 @@ class WaBucketRefAPI:
         wandb.log_artifact(artifact, aliases=[artifact_alias])
 
         # neuro-flow reads ::set-output... if only they are at the beginning of a string
-        print(f"::set-output name=artifact_name::{art_name}")
-        print(f"::set-output name=artifact_type::{art_type}")
-        print(f"::set-output name=artifact_alias::{artifact_alias}")
+        print(
+            f"::set-output name=artifact_name::{art_name}",
+            flush=True,
+            file=os.sys.stdout,
+        )
+        print(
+            f"::set-output name=artifact_type::{art_type}",
+            flush=True,
+            file=os.sys.stdout,
+        )
+        print(
+            f"::set-output name=artifact_alias::{artifact_alias}",
+            flush=True,
+            file=os.sys.stdout,
+        )
         return artifact_alias
 
     def _wandb_init_if_needed(self, run_args: Optional[RunArgsType] = None):
