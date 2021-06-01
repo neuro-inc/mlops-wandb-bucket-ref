@@ -3,7 +3,7 @@ from contextlib import contextmanager
 from typing import Dict, Optional, Sequence
 
 
-def parse_meta(meta: Sequence[str]) -> Dict:
+def parse_meta(meta: Sequence[str]) -> Dict[str, str]:
     result = {}
     for item in meta:
         k, *v = item.split("=")
@@ -11,13 +11,13 @@ def parse_meta(meta: Sequence[str]) -> Dict:
             raise ValueError(
                 f"Artifact meta should be KEY=VALUE pairs, got {k}={v} in {item}."
             )
-        v = "=".join(v)
-        result[k] = v
+        val = "=".join(v)
+        result[k] = val
     return result
 
 
 @contextmanager
-def switched_aws_cfg(creds_file_env: Optional[str]) -> None:
+def switched_aws_cfg(creds_file_env: Optional[str]):  # type: ignore
     try:
         switch_back = os.environ.get("AWS_SHARED_CREDENTIALS_FILE")
         if creds_file_env:
