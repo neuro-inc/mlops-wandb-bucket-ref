@@ -140,13 +140,13 @@ def upload(
     ref_api.wandb_start_run(
         w_run_name="texture-expand",
         w_job_type="generate-dataset",
-        alias=alias,
     )
 
     ref_api.upload_artifact(
         src_folder=Path(src_dir),
         art_name=name,
         art_type=type_,
+        art_alias=alias,
         art_metadata=meta,
         as_refference=reff,
     )
