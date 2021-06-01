@@ -45,7 +45,7 @@ jobs:
 
     - name: Run linters
       run: |
-        echo Linting ${{ github.sha }}
+        echo Linting ${{ github.event.pull_request.head.sha || github.sha }}
         make lint
 
     - name: Save the package version
@@ -71,7 +71,7 @@ jobs:
     - name: Build
       run: |
         docker build -t neuromation/wabucketref:${{ needs.lint.outputs.version }} \
-          --build-arg COMMIT_SHA=${{ github.sha }} \
+          --build-arg COMMIT_SHA=${{ github.event.pull_request.head.sha || github.sha }} \
           .
     - name: Push
       run: |
