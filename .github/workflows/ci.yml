@@ -3,6 +3,7 @@ name: CI
 on:
   push:
     branches: [master]
+    tags: [v*]
   pull_request:
     branches: [master]
   pull_request_target:
@@ -57,7 +58,7 @@ jobs:
     name: Build and push Docker image
     needs: [lint]
     runs-on: ubuntu-latest
-    if: github.event_name == 'release'
+    if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
     steps:
     - name: Checkout commit
       uses: actions/checkout@v2
