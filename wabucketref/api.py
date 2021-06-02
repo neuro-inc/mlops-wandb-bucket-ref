@@ -183,7 +183,7 @@ class WaBucketRefAPI:
         art_type: str,
         art_alias: str,
         dst_folder: Optional[Path] = None,
-    ) -> str:
+    ) -> Path:
         self._wandb_init_if_needed()
         artifact: wandb.Artifact = wandb.use_artifact(
             artifact_or_name=f"{art_name}:{art_alias}", type=art_type
@@ -192,4 +192,4 @@ class WaBucketRefAPI:
             dst_folder = Path(tempfile.mkdtemp())
         with switched_aws_cfg(self._s3_credentials_file):
             art_path: str = artifact.download(root=str(dst_folder))
-        return art_path
+        return Path(art_path)
