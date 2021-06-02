@@ -49,11 +49,6 @@ from . import WaBucketRefAPI, __version__, parse_meta
     type=str,
     help="Path to the credentials file for accessing S3 bucket.",
 )
-@click.option(
-    "--region-name",
-    type=str,
-    help="Region, where S3 bucket is located",
-)
 @click.pass_context
 def main(
     ctx: Context,
@@ -65,7 +60,6 @@ def main(
     aws_access_key_id: Optional[str],
     aws_secret_access_key: Optional[str],
     aws_credentials_file: Optional[str],
-    region_name: Optional[str],
 ) -> None:
     """
     Upload to and download from S3 artifacts, stored in W&B.
@@ -78,7 +72,6 @@ def main(
             "aws_access_key_id": aws_access_key_id,
             "aws_secret_access_key": aws_secret_access_key,
             "aws_credentials_file": aws_credentials_file,
-            "region_name": region_name,
         },
         "run_params": {
             "w_run_name": run_name,
@@ -105,6 +98,13 @@ def main(
     help="W&B artifact type to assing",
 )
 @click.option(
+    "-a",
+    "--alias",
+    "alias",
+    type=str,
+    help="W&B artifact alias to assing",
+)
+@click.option(
     "-m",
     "--metadata",
     metavar="KEY=VALUE",
@@ -121,24 +121,15 @@ def main(
         "or directly upload the folder to W&B"
     ),
 )
-@click.option(
-    "-a",
-    "--run_args",
-    help=(
-        "Args of current run. "
-        "Provide this argument for calculating a proper artifact alias. "
-        "Otherwise, the 'latest' will be used."
-    ),
-)
 @click.pass_context
 def upload(
     ctx: Context,
     src_dir: str,
     name: str,
     type_: str,
+    alias: str,
     metadata: Sequence[str],
     reff: bool,
-    run_args: Optional[str],
 ) -> None:
     """
     Upload artifact from local folder to the bucket
@@ -149,13 +140,13 @@ def upload(
     ref_api.wandb_start_run(
         w_run_name="texture-expand",
         w_job_type="generate-dataset",
-        run_args=run_args,
     )
 
     ref_api.upload_artifact(
         src_folder=Path(src_dir),
         art_name=name,
         art_type=type_,
+        art_alias=alias,
         art_metadata=meta,
         as_refference=reff,
     )

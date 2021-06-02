@@ -2,3 +2,4 @@
 
 Supported buckets:
 - S3
+- MinIO
