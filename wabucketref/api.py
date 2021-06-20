@@ -92,7 +92,7 @@ class WaBucketRefAPI:
                 for file_ in src_folder.glob("*"):
                     self._s3_upload_artifact(file_, artifact_remote_root)
                 logger.info(f"Artifact uploaded to {artifact_remote_root}")
-                artifact.add_reference(uri=str(artifact_remote_root))
+                artifact.add_reference(uri=str(artifact_remote_root),max_objects=100000)
         else:
             logger.info(f"Uploading artifact {src_folder} as directory...")
             artifact.add_dir(str(src_folder))
