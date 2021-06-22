@@ -5,4 +5,4 @@ flake8==3.9.0
 flake8-isort==4.0.0
 mypy==0.812
 neuro-extras==21.3.19
-pre-commit==2.11.1
+pre-commit==2.13.0
