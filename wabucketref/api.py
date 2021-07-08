@@ -4,6 +4,7 @@ import logging
 import os
 import sys
 import tempfile
+import time
 import uuid
 from pathlib import Path
 from typing import Dict, Optional, Union
@@ -116,6 +117,7 @@ class WaBucketRefAPI:
             flush=True,
             file=sys.stdout,
         )
+        time.sleep(1)  # https://github.com/neuro-inc/mlops-wandb-bucket-ref/issues/16
         return artifact_alias
 
     def _wandb_init_if_needed(self, run_args: Optional[RunArgsType] = None) -> None:
