@@ -63,6 +63,17 @@ jobs:
     - name: Checkout commit
       uses: actions/checkout@v2
 
+    - name: Sanity check for tag and version
+      run: |
+        export VERSION=${{ needs.lint.outputs.version }}
+        if [ "${{ github.ref }}" != "refs/tags/v$VERSION" ]
+        then
+          echo "Git tag '${{ github.ref }}' differs from hard-coded package version 'v$VERSION'"
+          exit 1
+        else
+          echo "OK, git tag matches hard-coded package version: 'v$VERSION'"
+        fi
+
     - name: Login to DockerHub
       uses: docker/login-action@v1.10.0
       with:
