@@ -15,7 +15,7 @@ setup(
     python_requires=">=3.7.0",
     install_requires=[
         "wandb[aws]==0.10.33",
-        "cloudpathlib[s3]==0.4.1",
+        "cloudpathlib[s3]==0.6.0",
     ],
     include_package_data=True,
     description=(
