@@ -1,2 +1,2 @@
 cloudpathlib[s3]==0.4.1
-wandb[aws]==0.10.33
+wandb[aws]==0.12.15
