@@ -1,4 +1,4 @@
-__version__ = "21.7.8"
+__version__ = "22.5.5"
 
 from .api import WaBucketRefAPI
 from .utils import parse_meta
