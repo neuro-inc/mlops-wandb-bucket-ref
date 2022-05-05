@@ -4,6 +4,7 @@ CURRENT_COMMIT = $(shell git rev-parse HEAD)
 setup:
 	pip install -r requirements/python-dev.txt
 	pre-commit install
+	pip install -e .
 
 .PHONY: lint
 lint: format
@@ -11,7 +12,7 @@ lint: format
 
 .PHONY: format
 format:
-	pre-commit run --all-files --show-diff-on-failure
+	pre-commit run --all-files
 
 .PHONY: image
 image:

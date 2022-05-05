@@ -138,8 +138,8 @@ def upload(
     ref_api = WaBucketRefAPI(**ctx.obj["init_params"])
     meta = parse_meta(metadata)
     ref_api.wandb_start_run(
-        w_run_name="texture-expand",
-        w_job_type="generate-dataset",
+        w_run_name=ctx.obj["run_params"]["w_run_name"],
+        w_job_type=ctx.obj["run_params"]["w_job_type"],
     )
 
     ref_api.upload_artifact(
@@ -197,8 +197,8 @@ def download(
             "Unable to download artifact there."
         )
     ref_api.wandb_start_run(
-        w_run_name="texture-expand",
-        w_job_type="generate-dataset",
+        w_run_name=ctx.obj["run_params"]["w_run_name"],
+        w_job_type=ctx.obj["run_params"]["w_job_type"],
         run_args=run_args,
     )
     ref_api.download_artifact(
