@@ -1,5 +1,4 @@
 -r python-base.txt
 
 mypy==0.950
-neuro-extras==22.2.2
 pre-commit==2.19.0
