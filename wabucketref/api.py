@@ -15,6 +15,7 @@ from wandb.wandb_run import Run
 
 from .utils import switched_aws_cfg
 
+
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 

@@ -2,6 +2,7 @@ import re
 
 from setuptools import find_packages, setup
 
+
 with open("wabucketref/__init__.py") as f:
     txt = f.read()
     try:
@@ -14,8 +15,8 @@ setup(
     version=version,
     python_requires=">=3.7.0",
     install_requires=[
-        "wandb[aws]==0.10.33",
-        "cloudpathlib[s3]==0.4.1",
+        "wandb[aws]>=0.10.33,<=0.12.16",
+        "cloudpathlib[s3]>=0.4.1,<=0.7.1",
     ],
     include_package_data=True,
     description=(
