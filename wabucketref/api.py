@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import argparse
 import hashlib
 import logging
@@ -7,7 +9,7 @@ import tempfile
 import time
 import uuid
 from pathlib import Path
-from typing import Dict, Optional, Union
+from typing import Dict, Sequence, Union
 
 import cloudpathlib  # type: ignore
 import wandb
@@ -25,12 +27,12 @@ RunArgsType = Union[argparse.Namespace, Dict, str]
 class WaBucketRefAPI:
     def __init__(
         self,
-        bucket: Optional[str] = None,
-        project_name: Optional[str] = None,
-        endpoint_url: Optional[str] = None,
-        aws_access_key_id: Optional[str] = None,
-        aws_secret_access_key: Optional[str] = None,
-        aws_credentials_file: Optional[str] = None,
+        bucket: str | None = None,
+        project_name: str | None = None,
+        endpoint_url: str | None = None,
+        aws_access_key_id: str | None = None,
+        aws_secret_access_key: str | None = None,
+        aws_credentials_file: str | None = None,
     ):
         # W&B related fields
         self._wab_project_name = project_name or os.environ["WANDB_PROJECT"]
@@ -64,8 +66,8 @@ class WaBucketRefAPI:
         src_folder: Path,
         art_name: str,
         art_type: str,
-        art_alias: Optional[str] = None,
-        art_metadata: Optional[Dict] = None,  # type: ignore
+        art_alias: str | None = None,
+        art_metadata: dict | None = None,  # type: ignore
         as_refference: bool = True,
         overwrite: bool = False,
     ) -> str:
@@ -121,7 +123,7 @@ class WaBucketRefAPI:
         time.sleep(1)  # https://github.com/neuro-inc/mlops-wandb-bucket-ref/issues/16
         return artifact_alias
 
-    def _wandb_init_if_needed(self, run_args: Optional[RunArgsType] = None) -> None:
+    def _wandb_init_if_needed(self, run_args: RunArgsType | None = None) -> None:
         if wandb.run is None:
             logger.info(
                 "Active W&B run was not found, starting one to upload the artifact."
@@ -130,9 +132,9 @@ class WaBucketRefAPI:
 
     def wandb_start_run(
         self,
-        w_run_name: Optional[str] = None,
-        w_job_type: Optional[str] = None,
-        run_args: Optional[RunArgsType] = None,
+        w_run_name: str | None = None,
+        w_job_type: str | None = None,
+        run_args: RunArgsType | None = None,
     ) -> Run:
         if wandb.run is not None:
             raise RuntimeError(f"W&B has registerred run {wandb.run.name}")
@@ -142,9 +144,9 @@ class WaBucketRefAPI:
                 project=self._wab_project_name,
                 name=w_run_name,
                 job_type=w_job_type,
-                id=os.environ.get("NEURO_JOB_ID"),
                 settings=wandb.Settings(start_method="fork"),
                 config=run_args,  # type: ignore
+                tags=self._try_get_neuro_tags(),
             )
         if not isinstance(wandb_run, Run):
             raise RuntimeError(f"Failed to initialize W&B run, got: {wandb_run:r}")
@@ -160,7 +162,7 @@ class WaBucketRefAPI:
         else:
             raise TypeError(f"{path} is not a dir nor file.")
 
-    def _get_artifact_alias(self, art_alias: Optional[str] = None) -> str:
+    def _get_artifact_alias(self, art_alias: str | None = None) -> str:
         """
         There are several ways to set the artifact alias,
         depending on the "art_alias" variable value:
@@ -187,7 +189,7 @@ class WaBucketRefAPI:
         art_name: str,
         art_type: str,
         art_alias: str,
-        dst_folder: Optional[Path] = None,
+        dst_folder: Path | None = None,
     ) -> Path:
         self._wandb_init_if_needed()
         artifact: wandb.Artifact = wandb.use_artifact(
@@ -198,3 +200,14 @@ class WaBucketRefAPI:
         with switched_aws_cfg(self._s3_credentials_file):
             art_path: str = artifact.download(root=str(dst_folder))
         return Path(art_path)
+
+    def _try_get_neuro_tags(self) -> Sequence[str] | None:
+        if os.environ.get("NEURO_JOB_ID"):
+            # assuming the neuro platform job
+            return [
+                f"job_id:{os.environ.get('NEURO_JOB_ID')}",
+                f"job_name:{os.environ.get('NEURO_JOB_NAME')}",
+                f"owner:{os.environ.get('NEURO_JOB_OWNER')}",
+            ]
+        else:
+            return None
