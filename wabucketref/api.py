@@ -209,3 +209,5 @@ class WaBucketRefAPI:
                 f"job_name:{os.environ.get('NEURO_JOB_NAME')}",
                 f"owner:{os.environ.get('NEURO_JOB_OWNER')}",
             ]
+        else:
+            return None
