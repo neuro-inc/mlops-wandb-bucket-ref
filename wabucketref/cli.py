@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from pathlib import Path
-from typing import Optional, Sequence
+from typing import Sequence
 
 import click
 from click import Context
@@ -52,14 +54,14 @@ from . import WaBucketRefAPI, __version__, parse_meta
 @click.pass_context
 def main(
     ctx: Context,
-    bucket: Optional[str],
-    project_name: Optional[str],
-    run_name: Optional[str],
-    job_type: Optional[str],
-    endpoint_url: Optional[str],
-    aws_access_key_id: Optional[str],
-    aws_secret_access_key: Optional[str],
-    aws_credentials_file: Optional[str],
+    bucket: str | None,
+    project_name: str | None,
+    run_name: str | None,
+    job_type: str | None,
+    endpoint_url: str | None,
+    aws_access_key_id: str | None,
+    aws_secret_access_key: str | None,
+    aws_credentials_file: str | None,
 ) -> None:
     """
     Upload to and download from S3 artifacts, stored in W&B.
@@ -180,8 +182,8 @@ def download(
     artifact_type: str,
     artifact_name: str,
     artifact_alias: str,
-    destination_folder: Optional[Path],
-    run_args: Optional[str],
+    destination_folder: Path | None,
+    run_args: str | None,
 ) -> None:
     """
     Download artifact of specified type, name and version.

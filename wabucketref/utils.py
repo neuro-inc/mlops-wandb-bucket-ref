@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import os
 from contextlib import contextmanager
-from typing import Dict, Optional, Sequence
+from typing import Sequence
 
 
-def parse_meta(meta: Sequence[str]) -> Dict[str, str]:
+def parse_meta(meta: Sequence[str]) -> dict[str, str]:
     result = {}
     for item in meta:
         k, *v = item.split("=")
@@ -17,7 +19,7 @@ def parse_meta(meta: Sequence[str]) -> Dict[str, str]:
 
 
 @contextmanager
-def switched_aws_cfg(creds_file_env: Optional[str]):  # type: ignore
+def switched_aws_cfg(creds_file_env: str | None):  # type: ignore
     try:
         switch_back = os.environ.get("AWS_SHARED_CREDENTIALS_FILE")
         if creds_file_env:
