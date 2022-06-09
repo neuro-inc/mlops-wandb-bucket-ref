@@ -1,4 +1,4 @@
 -r python-base.txt
 
-mypy==0.960
+mypy==0.961
 pre-commit==2.19.0
