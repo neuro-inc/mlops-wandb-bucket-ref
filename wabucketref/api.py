@@ -11,17 +11,18 @@ import uuid
 from pathlib import Path
 from typing import Dict, Sequence, Union
 
-import cloudpathlib  # type: ignore
 import wandb
+from neuro_cli.asyncio_utils import Runner
+from neuro_sdk import Bucket, Client, Factory, ResourceNotFound
 from wandb.wandb_run import Run
-
-from .utils import switched_aws_cfg
+from yarl import URL
 
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 RunArgsType = Union[argparse.Namespace, Dict, str]
+DEFAULT_REF_NAME = "platform_blob"
 
 
 class WaBucketRefAPI:
@@ -29,37 +30,51 @@ class WaBucketRefAPI:
         self,
         bucket: str | None = None,
         project_name: str | None = None,
-        endpoint_url: str | None = None,
-        aws_access_key_id: str | None = None,
-        aws_secret_access_key: str | None = None,
-        aws_credentials_file: str | None = None,
     ):
-        # W&B related fields
         self._wab_project_name = project_name or os.environ["WANDB_PROJECT"]
 
-        # S3 related fields
-        bucket_name = bucket or f"s3://{self._wab_project_name}"
-        self._s3_key_id = aws_access_key_id or os.environ.get("AWS_ACCESS_KEY_ID")
-        self._s3_access_key = aws_secret_access_key or os.environ.get(
-            "AWS_SECRET_ACCESS_KEY"
-        )
-        self._s3_credentials_file = aws_credentials_file or os.environ.get(
-            "WABUCKET_AWS_CREDENTIALS_FILE"
-        )
-        if self._s3_credentials_file and self._s3_access_key:
-            raise Exception(
-                "AWS credentials file and secret key "
-                "are provided at the same time, unclear which to use."
-            )
-        # TODO: wait until release of a new version
-        self._s3_endpoint_url = os.environ.get("AWS_S3_ENDPOINT_URL") or endpoint_url
-        with switched_aws_cfg(self._s3_credentials_file):
-            self._s3_client = cloudpathlib.S3Client(
-                aws_access_key_id=self._s3_key_id,
-                aws_secret_access_key=self._s3_access_key,
-                endpoint_url=self._s3_endpoint_url,
-            )
-            self._s3_bucket = self._s3_client.CloudPath(bucket_name)
+        self._runner = Runner()
+        self._runner.__enter__()
+
+        self._n_client: Client | None = None
+        self._runner.run(self.init_client())
+
+        self._bucket_name = bucket or self._wab_project_name
+        self._bucket: Bucket | None = None
+        self._runner.run(self.init_bucket())
+
+    async def init_client(self) -> Client:
+        if self._n_client is not None and not self._n_client._closed:
+            return self._n_client
+        client = await Factory().get()
+        self._n_client = client
+        return self._n_client
+
+    @property
+    def client(self) -> Client:
+        assert self._n_client is not None
+        return self._n_client
+
+    async def init_bucket(self) -> Bucket:
+        if not self._bucket:
+            self._bucket = await self.client.buckets.get(self._bucket_name)
+        return self._bucket
+
+    @property
+    def bucket(self) -> Bucket:
+        assert self._bucket is not None
+        return self._bucket
+
+    def close(self) -> None:
+        if self._n_client is not None:
+            self._runner.run(self._n_client.close())
+        try:
+            # Suppress prints unhandled exceptions
+            # on event loop closing
+            sys.stderr = None  # type: ignore
+            self._runner.__exit__(*sys.exc_info())
+        finally:
+            sys.stderr = sys.__stderr__
 
     def upload_artifact(
         self,
@@ -75,30 +90,39 @@ class WaBucketRefAPI:
         artifact = wandb.Artifact(name=art_name, type=art_type, metadata=art_metadata)
         artifact_alias = self._get_artifact_alias(art_alias)
         if as_refference:
-            artifact_remote_root: cloudpathlib.CloudPath = (
-                self._s3_bucket / art_type / art_name / artifact_alias
-            )
+            src_as_uri = URL(f"file:{src_folder.resolve()}")
+            bucket_path: str = f"{art_type}/{art_name}/{artifact_alias}"
+            artifact_bucket_root: URL = self.bucket.uri / bucket_path
             logger.info(
-                f"Uploading artifact from '{src_folder}' to {artifact_remote_root} ..."
+                f"Uploading artifact from '{src_as_uri}' to {artifact_bucket_root} ..."
             )
-            with switched_aws_cfg(self._s3_credentials_file):
-                if not overwrite and artifact_remote_root.exists():
-                    raise RuntimeError(
-                        f"Artifact {artifact_remote_root} exists, "
-                        "overwrite is not allowed."
-                    )
-                elif overwrite and artifact_remote_root.exists():
-                    logger.warning(
-                        f"Artifact {artifact_remote_root} exists, will be overwriten."
-                    )
-                    artifact_remote_root.rmtree()
 
-                for file_ in src_folder.glob("*"):
-                    self._s3_upload_artifact(file_, artifact_remote_root)
-                logger.info(f"Artifact uploaded to {artifact_remote_root}")
-                artifact.add_reference(
-                    uri=str(artifact_remote_root), max_objects=100000
+            root_exists = self._runner.run(self._path_exists_in_bucket(bucket_path))
+            if not overwrite and root_exists:
+                raise RuntimeError(
+                    f"Artifact {artifact_bucket_root} exists, "
+                    "overwrite is not allowed."
                 )
+            elif overwrite and root_exists:
+                logger.warning(
+                    f"Artifact {artifact_bucket_root} exists, will be overwriten."
+                )
+                self._runner.run(
+                    self.client.buckets.blob_rm(artifact_bucket_root / "*")
+                )
+
+            self._runner.run(
+                self.client.buckets.upload_dir(
+                    src=src_as_uri,
+                    dst=artifact_bucket_root,
+                )
+            )
+            logger.info(f"Artifact uploaded to {artifact_bucket_root}")
+            artifact.add_reference(
+                name=DEFAULT_REF_NAME,
+                uri=str(artifact_bucket_root),
+                checksum=False,
+            )
         else:
             logger.info(f"Uploading artifact {src_folder} as directory...")
             artifact.add_dir(str(src_folder))
@@ -123,6 +147,16 @@ class WaBucketRefAPI:
         time.sleep(1)  # https://github.com/neuro-inc/mlops-wandb-bucket-ref/issues/16
         return artifact_alias
 
+    async def _path_exists_in_bucket(self, path: str) -> bool:
+        try:
+            await self.client.buckets.head_blob(
+                self._bucket_name,
+                key=path,
+            )
+            return True
+        except ResourceNotFound:
+            return False
+
     def _wandb_init_if_needed(self, run_args: RunArgsType | None = None) -> None:
         if wandb.run is None:
             logger.info(
@@ -139,28 +173,17 @@ class WaBucketRefAPI:
         if wandb.run is not None:
             raise RuntimeError(f"W&B has registerred run {wandb.run.name}")
 
-        with switched_aws_cfg(self._s3_credentials_file):
-            wandb_run = wandb.init(
-                project=self._wab_project_name,
-                name=w_run_name,
-                job_type=w_job_type,
-                settings=wandb.Settings(start_method="fork"),
-                config=run_args,  # type: ignore
-                tags=self._try_get_neuro_tags(),
-            )
+        wandb_run = wandb.init(
+            project=self._wab_project_name,
+            name=w_run_name,
+            job_type=w_job_type,
+            settings=wandb.Settings(start_method="fork"),
+            config=run_args,  # type: ignore
+            tags=self._try_get_neuro_tags(),
+        )
         if not isinstance(wandb_run, Run):
             raise RuntimeError(f"Failed to initialize W&B run, got: {wandb_run:r}")
         return wandb_run
-
-    def _s3_upload_artifact(self, path: Path, root: cloudpathlib.S3Path) -> None:
-        if path.is_file():
-            (root / str(path.name)).write_bytes(path.read_bytes())
-        elif path.is_dir():
-            (root / str(path.name)).mkdir(parents=True, exist_ok=True)
-            for x in path.glob("*"):
-                self._s3_upload_artifact(x, root / path.name)
-        else:
-            raise TypeError(f"{path} is not a dir nor file.")
 
     def _get_artifact_alias(self, art_alias: str | None = None) -> str:
         """
@@ -195,11 +218,21 @@ class WaBucketRefAPI:
         artifact: wandb.Artifact = wandb.use_artifact(
             artifact_or_name=f"{art_name}:{art_alias}", type=art_type
         )
+        blob_ref = artifact.manifest.entries[DEFAULT_REF_NAME].ref
+        assert isinstance(blob_ref, str)
+        blob_uri = URL(blob_ref)
+
         if dst_folder is None:
             dst_folder = Path(tempfile.mkdtemp())
-        with switched_aws_cfg(self._s3_credentials_file):
-            art_path: str = artifact.download(root=str(dst_folder))
-        return Path(art_path)
+        dst_uri = URL(f"file:{dst_folder.resolve()}")
+
+        self._runner.run(
+            self.client.buckets.download_dir(
+                src=blob_uri,
+                dst=dst_uri,
+            )
+        )
+        return dst_folder
 
     def _try_get_neuro_tags(self) -> Sequence[str] | None:
         if os.environ.get("NEURO_JOB_ID"):
