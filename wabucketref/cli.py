@@ -14,7 +14,9 @@ from . import WaBucketRefAPI, __version__, parse_meta
     version=__version__, message="W&B bucket artifacts package version: %(version)s"
 )
 @click.option(
-    "--bucket", type=str, help="S3 bucket, which will be used to store artifacts"
+    "--bucket",
+    type=str,
+    help="Platform bucket ID or string name, which will be used to store the artifacts",
 )
 @click.option(
     "--project-name",
@@ -31,26 +33,6 @@ from . import WaBucketRefAPI, __version__, parse_meta
     type=str,
     help="W&B human-readable job type to group similar jobs together in the reports",
 )
-@click.option(
-    "--endpoint-url",
-    type=str,
-    help="S3 bucket service endpoint URL",
-)
-@click.option(
-    "--aws-access-key-id",
-    type=str,
-    help="Bucket service access key ID",
-)
-@click.option(
-    "--aws-secret-access-key",
-    type=str,
-    help="Bucket service secret access key, assotiated with the provided access key ID",
-)
-@click.option(
-    "--aws-credentials-file",
-    type=str,
-    help="Path to the credentials file for accessing S3 bucket.",
-)
 @click.pass_context
 def main(
     ctx: Context,
@@ -58,28 +40,19 @@ def main(
     project_name: str | None,
     run_name: str | None,
     job_type: str | None,
-    endpoint_url: str | None,
-    aws_access_key_id: str | None,
-    aws_secret_access_key: str | None,
-    aws_credentials_file: str | None,
 ) -> None:
     """
-    Upload to and download from S3 artifacts, stored in W&B.
+    Upload to and download from platform buckets artifacts, stored in W&B.
     """
+    api = WaBucketRefAPI(bucket, project_name)
     ctx.obj = {
-        "init_params": {
-            "bucket": bucket,
-            "project_name": project_name,
-            "endpoint_url": endpoint_url,
-            "aws_access_key_id": aws_access_key_id,
-            "aws_secret_access_key": aws_secret_access_key,
-            "aws_credentials_file": aws_credentials_file,
-        },
+        "wabucket": api,
         "run_params": {
             "w_run_name": run_name,
             "w_job_type": job_type,
         },
     }
+    ctx.call_on_close(api.close)
 
 
 @main.command()
@@ -119,8 +92,8 @@ def main(
     is_flag=True,
     default=True,
     help=(
-        "Whether to upload artifact to S3 bucket and use it as reference in W&B, "
-        "or directly upload the folder to W&B"
+        "Whether to upload artifact to bucket and use it as reference in W&B, "
+        "or directly upload the folder to W&B servers."
     ),
 )
 @click.pass_context
@@ -135,9 +108,9 @@ def upload(
 ) -> None:
     """
     Upload artifact from local folder to the bucket
-    and store it's reference as W&B artifact
+    and store it's reference in W&B artifact
     """
-    ref_api = WaBucketRefAPI(**ctx.obj["init_params"])
+    ref_api: WaBucketRefAPI = ctx.obj["wabucket"]
     meta = parse_meta(metadata)
     ref_api.wandb_start_run(
         w_run_name=ctx.obj["run_params"]["w_run_name"],
@@ -188,14 +161,14 @@ def download(
     """
     Download artifact of specified type, name and version.
     """
-    ref_api = WaBucketRefAPI(**ctx.obj["init_params"])
+    ref_api: WaBucketRefAPI = ctx.obj["wabucket"]
     if destination_folder is None:
         destination_folder = Path() / artifact_type / artifact_name / artifact_alias
     elif not destination_folder.exists():
         destination_folder.mkdir(parents=True)
     elif not destination_folder.is_dir():
         raise TypeError(
-            f"{destination_folder} is not a directory, but {type(destination_folder)}. "
+            f"Destination '{destination_folder}' exists, but not a directory. "
             "Unable to download artifact there."
         )
     ref_api.wandb_start_run(
