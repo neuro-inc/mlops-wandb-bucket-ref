@@ -1,0 +1,37 @@
+kind: live
+description: This could be convered to a proper CI/CD test.
+
+images:
+  wabucket:
+    ref: image:wabucket:${{ git.sha }}
+    context: .
+    dockerfile: Dockerfile
+    build_args:
+    - COMMIT_SHA=${{ git.sha }}
+
+jobs:
+  check:
+    image: ${{ images.wabucket.ref }}
+    pass_config: True
+    multi: true
+    env:
+      WANDB_API_KEY: secret:wandb-public-token
+      WANDB_PROJECT: wabucket-test-bucket
+      # AWS_SHARED_CREDENTIALS_FILE: /aws_creds
+    volumes:
+      - secret:ysem-neuro-aws-creds:/aws_creds
+    bash: |
+      # wget https://raw.githubusercontent.com/neuro-inc/neuro-cli/master/build-tools/garbage-files-generator.py
+      tmp_folder=$(mktemp -d)/data
+      # python garbage-files-generator.py --output-dir $tmp_folder 10000 1Gb
+      time wabucket download many_small_files_default_branch wabucket_on_neuro 85c13fac-d90d-480c-b851-6f602c54fb4e -d $tmp_folder
+      bash
+
+      # time wabucket --bucket s3://neuro-pl-ae967fb38a-yevheniisemendiak-test-wa3996a5b9bec1 upload $tmp_folder -n wabucket_on_neuro -t many_small_files_default_branch
+      # time wabucket --bucket s3://neuro-pl-ae967fb38a-yevheniisemendiak-test-wa3996a5b9bec1 download many_small_files_default_branch wabucket_on_neuro e777efa6-7024-4570-99cb-831769160634 -d $tmp_folder
+
+# Some speed benchmarks:
+# refactored upload (aca25515d4f2d988ebd960a4348988d8738790df): 3m46.635s -- job-6c3a8a96-ed59-4b0d-9a55-c9d4fe38fdd7
+# refactored download (aca25515d4f2d988ebd960a4348988d8738790df): 1m52.463s -- job-c9407404-54aa-497a-a361-28329107a9d6
+# original upload (0b8be9b6563f87102f8bc4f684bad1635a9ba788): 42m27.011s -- job-80a34771-36c4-4325-9001-8a538376bd03
+# original download (0b8be9b6563f87102f8bc4f684bad1635a9ba788): 0m17.376s -- job-8d12038e-230b-4fa3-9b0a-c189a0d28a0e
