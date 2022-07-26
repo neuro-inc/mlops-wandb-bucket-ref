@@ -9,7 +9,7 @@ import tempfile
 import time
 import uuid
 from pathlib import Path
-from typing import Dict, Sequence, Union
+from typing import Dict, Union
 
 import wandb
 from neuro_cli.asyncio_utils import Runner
@@ -234,13 +234,19 @@ class WaBucketRefAPI:
         )
         return dst_folder
 
-    def _try_get_neuro_tags(self) -> Sequence[str] | None:
-        if os.environ.get("NEURO_JOB_ID"):
+    def _try_get_neuro_tags(self) -> list[str] | None:
+        job_id = os.environ.get("NEURO_JOB_ID")
+        if job_id:
             # assuming the neuro platform job
-            return [
-                f"job_id:{os.environ.get('NEURO_JOB_ID')}",
+            result = [
+                f"job_id:{job_id}",
                 f"job_name:{os.environ.get('NEURO_JOB_NAME')}",
                 f"owner:{os.environ.get('NEURO_JOB_OWNER')}",
             ]
+            result.extend(self._get_neuro_job_tags(job_id))
         else:
             return None
+
+    def _get_neuro_job_tags(self, job_id: str) -> list[str]:
+        job_description = self._runner.run(self._n_client.jobs.status(job_id))
+        return job_description.tags

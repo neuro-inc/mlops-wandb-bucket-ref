@@ -14,7 +14,9 @@ from . import WaBucketRefAPI, __version__, parse_meta
     version=__version__, message="W&B bucket artifacts package version: %(version)s"
 )
 @click.option(
-    "--bucket", type=str, help="Platform bucket, which will be used to store artifacts"
+    "--bucket",
+    type=str,
+    help="Platform bucket ID or string name, which will be used to store the artifacts",
 )
 @click.option(
     "--project-name",
