@@ -244,9 +244,12 @@ class WaBucketRefAPI:
                 f"owner:{os.environ.get('NEURO_JOB_OWNER')}",
             ]
             result.extend(self._get_neuro_job_tags(job_id))
+            return result
         else:
             return None
 
     def _get_neuro_job_tags(self, job_id: str) -> list[str]:
+        assert self._runner
+        assert self._n_client
         job_description = self._runner.run(self._n_client.jobs.status(job_id))
-        return job_description.tags
+        return list(job_description.tags)
