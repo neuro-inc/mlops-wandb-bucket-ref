@@ -1,5 +1,4 @@
 kind: live
-description: This could be convered to a proper CI/CD test.
 
 images:
   wabucket:
@@ -25,7 +24,6 @@ jobs:
       tmp_folder=$(mktemp -d)/data
       # python garbage-files-generator.py --output-dir $tmp_folder 10000 1Gb
       time wabucket download many_small_files_default_branch wabucket_on_neuro 85c13fac-d90d-480c-b851-6f602c54fb4e -d $tmp_folder
-      bash
 
       # time wabucket --bucket s3://neuro-pl-ae967fb38a-yevheniisemendiak-test-wa3996a5b9bec1 upload $tmp_folder -n wabucket_on_neuro -t many_small_files_default_branch
       # time wabucket --bucket s3://neuro-pl-ae967fb38a-yevheniisemendiak-test-wa3996a5b9bec1 download many_small_files_default_branch wabucket_on_neuro e777efa6-7024-4570-99cb-831769160634 -d $tmp_folder

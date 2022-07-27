@@ -74,17 +74,25 @@ jobs:
           echo "OK, git tag matches hard-coded package version: 'v$VERSION'"
         fi
 
-    - name: Login to DockerHub
+    - name: Login to Github container registry
       uses: docker/login-action@v2.0.0
       with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Build
+      env:
+        VERSION: ${{ needs.lint.outputs.version }}
+        COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       run: |
-        docker build -t neuromation/wabucketref:${{ needs.lint.outputs.version }} \
-          --build-arg COMMIT_SHA=${{ github.event.pull_request.head.sha || github.sha }} \
+        docker build \
+          -t "ghcr.io/neuro-inc/wabucketref:${VERSION}" \
+          -t "ghcr.io/neuro-inc/wabucketref:latest" \
+          --build-arg COMMIT_SHA=${COMMIT_SHA} \
           .
     - name: Push
+      env:
+        VERSION: ${{ needs.lint.outputs.version }}
       run: |
-        docker push neuromation/wabucketref:${{ needs.lint.outputs.version }}
+        docker push ghcr.io/neuro-inc/wabucketref --all-tags
