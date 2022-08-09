@@ -218,9 +218,7 @@ class WaBucketRefAPI:
         artifact: wandb.Artifact = wandb.use_artifact(
             artifact_or_name=f"{art_name}:{art_alias}", type=art_type
         )
-        blob_ref = artifact.manifest.entries[DEFAULT_REF_NAME].ref
-        assert isinstance(blob_ref, str)
-        blob_uri = URL(blob_ref)
+        blob_uri = self._get_artifact_ref(artifact, art_name, art_type, art_alias)
 
         if dst_folder is None:
             dst_folder = Path(tempfile.mkdtemp())
@@ -233,6 +231,27 @@ class WaBucketRefAPI:
             )
         )
         return dst_folder
+
+    def _get_artifact_ref(
+        self,
+        artifact: wandb.Artifact,
+        art_name: str,
+        art_type: str,
+        art_alias: str,
+    ) -> URL:
+        try:
+            blob_ref = artifact.manifest.entries[DEFAULT_REF_NAME].ref
+            assert isinstance(blob_ref, str)
+        except KeyError:
+            # backward support, artifact was saved with wabucket version < 22.7.0
+            bucket_path = f"{art_type}/{art_name}/{art_alias}"
+            blob_ref = str(self.bucket.uri / bucket_path)
+            logger.warning(
+                f"Artifact ref for {bucket_path} was not found. "
+                f"Trying to fetch from: {blob_ref}"
+            )
+
+        return URL(blob_ref)
 
     def _try_get_neuro_tags(self) -> list[str] | None:
         job_id = os.environ.get("NEURO_JOB_ID")
