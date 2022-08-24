@@ -70,14 +70,14 @@ def main(
     "type_",
     type=str,
     required=True,
-    help="W&B artifact type to assing",
+    help="W&B artifact type to assign",
 )
 @click.option(
     "-a",
     "--alias",
     "alias",
     type=str,
-    help="W&B artifact alias to assing",
+    help="W&B artifact alias to assign",
 )
 @click.option(
     "-m",
