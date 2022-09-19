@@ -31,17 +31,14 @@ class WaBucketRefAPI:
         bucket: str | None = None,
         project_name: str | None = None,
     ):
-        self._wab_project_name = project_name or os.environ["WANDB_PROJECT"]
+        self._wab_project_name = project_name or os.environ.get("WANDB_PROJECT")
 
         self._runner = Runner()
-        self._runner.__enter__()
 
         self._n_client: Client | None = None
-        self._runner.run(self.init_client())
 
         self._bucket_name = bucket or self._wab_project_name
         self._bucket: Bucket | None = None
-        self._runner.run(self.init_bucket())
 
     async def init_client(self) -> Client:
         if self._n_client is not None and not self._n_client._closed:
@@ -57,6 +54,7 @@ class WaBucketRefAPI:
 
     async def init_bucket(self) -> Bucket:
         if not self._bucket:
+            assert self._bucket_name, "Bucket name is not provided."
             self._bucket = await self.client.buckets.get(self._bucket_name)
         return self._bucket
 
@@ -72,7 +70,8 @@ class WaBucketRefAPI:
             # Suppress prints unhandled exceptions
             # on event loop closing
             sys.stderr = None  # type: ignore
-            self._runner.__exit__(*sys.exc_info())
+            if self._runner._started:
+                self._runner.__exit__(*sys.exc_info())
         finally:
             sys.stderr = sys.__stderr__
 
@@ -86,6 +85,7 @@ class WaBucketRefAPI:
         as_refference: bool = True,
         overwrite: bool = False,
     ) -> str:
+        self._self_init_if_needed()
         self._wandb_init_if_needed()
         artifact = wandb.Artifact(name=art_name, type=art_type, metadata=art_metadata)
         artifact_alias = self._get_artifact_alias(art_alias)
@@ -214,6 +214,7 @@ class WaBucketRefAPI:
         art_alias: str,
         dst_folder: Path | None = None,
     ) -> Path:
+        self._self_init_if_needed()
         self._wandb_init_if_needed()
         artifact: wandb.Artifact = wandb.use_artifact(
             artifact_or_name=f"{art_name}:{art_alias}", type=art_type
@@ -230,6 +231,7 @@ class WaBucketRefAPI:
                 dst=dst_uri,
             )
         )
+        logger.info(f"Artifact was downloaded to '{dst_folder}'")
         return dst_folder
 
     def _get_artifact_ref(
@@ -272,3 +274,9 @@ class WaBucketRefAPI:
         assert self._n_client
         job_description = self._runner.run(self._n_client.jobs.status(job_id))
         return list(job_description.tags)
+
+    def _self_init_if_needed(self) -> None:
+        if not self._runner._started:
+            self._runner.__enter__()
+        self._runner.run(self.init_client())
+        self._runner.run(self.init_bucket())
