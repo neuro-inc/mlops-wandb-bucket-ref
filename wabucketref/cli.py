@@ -109,15 +109,27 @@ def main(
         "or directly upload the folder to W&B servers."
     ),
 )
+@click.option(
+    "-s",
+    "--suffix",
+    type=str,
+    help=(
+        "Suffix to append to the output names 'artifact_type', "
+        "'artifact_name' and 'artifact_alias', which are read by the Neuro-Flow. "
+        "This is usefull if you need to upload several artifacts "
+        "from within a single job."
+    ),
+)
 @click.pass_context
 def upload(
     ctx: Context,
     src_dir: str,
     name: str,
     type_: str,
-    alias: str,
+    alias: str | None,
     metadata: Sequence[str],
     reff: bool,
+    suffix: str | None,
 ) -> None:
     """
     Upload artifact from local folder to the bucket
@@ -137,6 +149,7 @@ def upload(
         art_alias=alias,
         art_metadata=meta,
         as_refference=reff,
+        suffix=suffix,
     )
 
 

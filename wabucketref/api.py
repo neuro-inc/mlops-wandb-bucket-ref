@@ -86,6 +86,7 @@ class WaBucketRefAPI:
         art_metadata: dict | None = None,  # type: ignore
         as_refference: bool = True,
         overwrite: bool = False,
+        suffix: str | None = None,
     ) -> str:
         self._self_init_if_needed()
         self._wandb_init_if_needed()
@@ -131,18 +132,19 @@ class WaBucketRefAPI:
         wandb.log_artifact(artifact, aliases=[artifact_alias])
 
         # neuro-flow reads ::set-output... if only they are at the beginning of a string
+        suff = "_" + suffix if suffix else ""
         print(
-            f"::set-output name=artifact_name::{art_name}",
+            f"::set-output name=artifact_name{suff}::{art_name}",
             flush=True,
             file=sys.stdout,
         )
         print(
-            f"::set-output name=artifact_type::{art_type}",
+            f"::set-output name=artifact_type{suff}::{art_type}",
             flush=True,
             file=sys.stdout,
         )
         print(
-            f"::set-output name=artifact_alias::{artifact_alias}",
+            f"::set-output name=artifact_alias{suff}::{artifact_alias}",
             flush=True,
             file=sys.stdout,
         )
