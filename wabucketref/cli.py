@@ -33,6 +33,14 @@ from . import WaBucketRefAPI, __version__, parse_meta
     type=str,
     help="W&B human-readable job type to group similar jobs together in the reports",
 )
+@click.option(
+    "--entity",
+    type=str,
+    help=(
+        "W&B entity. A username or team name where you're sending runs. "
+        "See https://docs.wandb.ai/ref/python/init for more details."
+    ),
+)
 @click.pass_context
 def main(
     ctx: Context,
@@ -40,11 +48,16 @@ def main(
     project_name: str | None,
     run_name: str | None,
     job_type: str | None,
+    entity: str | None,
 ) -> None:
     """
     Upload to and download from platform buckets artifacts, stored in W&B.
     """
-    api = WaBucketRefAPI(bucket, project_name)
+    api = WaBucketRefAPI(
+        bucket=bucket,
+        project_name=project_name,
+        entity=entity,
+    )
     ctx.obj = {
         "wabucket": api,
         "run_params": {

@@ -30,6 +30,7 @@ class WaBucketRefAPI:
         self,
         bucket: str | None = None,
         project_name: str | None = None,
+        entity: str | None = None,
     ):
         self._wab_project_name = project_name or os.environ.get("WANDB_PROJECT")
 
@@ -39,6 +40,7 @@ class WaBucketRefAPI:
 
         self._bucket_name = bucket or self._wab_project_name
         self._bucket: Bucket | None = None
+        self._entity = entity or os.environ.get("WANDB_ENTITY")
 
     async def init_client(self) -> Client:
         if self._n_client is not None and not self._n_client._closed:
@@ -175,6 +177,7 @@ class WaBucketRefAPI:
 
         wandb_run = wandb.init(
             project=self._wab_project_name,
+            entity=self._entity,
             name=w_run_name,
             job_type=w_job_type,
             settings=wandb.Settings(start_method="fork"),

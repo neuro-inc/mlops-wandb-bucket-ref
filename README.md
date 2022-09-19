@@ -27,7 +27,7 @@ Each download or upload execution creates a dedicated W&B Run. The Run name coul
 
 Some metainfo about the source job (job ID, name, owner and tags) is attached to the W&B run, so it could be easily filtered and found.
 
-Please, check other global command options via `wabucket --help` or dedicated options for upload/download via `wabucket upload --help` and `wabucket download --help` respectively.
+Please, check other global options via `wabucket --help` or dedicated options for upload/download via `wabucket upload --help` and `wabucket download --help` respectively.
 
 #### Downloading artiacts
 While downloading, you *could* parameterise output path with `-d, --destination-folder PATH` option. Otherwise, the artifact will be downloaded into the current working directory: `./<artifact_type>/<artifact_name>/<artifact_alias>`.
