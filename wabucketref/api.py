@@ -152,6 +152,7 @@ class WaBucketRefAPI:
         return artifact_alias
 
     async def _path_exists_in_bucket(self, path: str) -> bool:
+        assert self._bucket_name
         try:
             await self.client.buckets.head_blob(
                 self._bucket_name,
