@@ -30,18 +30,17 @@ class WaBucketRefAPI:
         self,
         bucket: str | None = None,
         project_name: str | None = None,
+        entity: str | None = None,
     ):
-        self._wab_project_name = project_name or os.environ["WANDB_PROJECT"]
+        self._wab_project_name = project_name or os.environ.get("WANDB_PROJECT")
 
         self._runner = Runner()
-        self._runner.__enter__()
 
         self._n_client: Client | None = None
-        self._runner.run(self.init_client())
 
         self._bucket_name = bucket or self._wab_project_name
         self._bucket: Bucket | None = None
-        self._runner.run(self.init_bucket())
+        self._entity = entity or os.environ.get("WANDB_ENTITY")
 
     async def init_client(self) -> Client:
         if self._n_client is not None and not self._n_client._closed:
@@ -57,6 +56,7 @@ class WaBucketRefAPI:
 
     async def init_bucket(self) -> Bucket:
         if not self._bucket:
+            assert self._bucket_name, "Bucket name is not provided."
             self._bucket = await self.client.buckets.get(self._bucket_name)
         return self._bucket
 
@@ -72,7 +72,8 @@ class WaBucketRefAPI:
             # Suppress prints unhandled exceptions
             # on event loop closing
             sys.stderr = None  # type: ignore
-            self._runner.__exit__(*sys.exc_info())
+            if self._runner._started:
+                self._runner.__exit__(*sys.exc_info())
         finally:
             sys.stderr = sys.__stderr__
 
@@ -85,7 +86,9 @@ class WaBucketRefAPI:
         art_metadata: dict | None = None,  # type: ignore
         as_refference: bool = True,
         overwrite: bool = False,
+        suffix: str | None = None,
     ) -> str:
+        self._self_init_if_needed()
         self._wandb_init_if_needed()
         artifact = wandb.Artifact(name=art_name, type=art_type, metadata=art_metadata)
         artifact_alias = self._get_artifact_alias(art_alias)
@@ -129,18 +132,19 @@ class WaBucketRefAPI:
         wandb.log_artifact(artifact, aliases=[artifact_alias])
 
         # neuro-flow reads ::set-output... if only they are at the beginning of a string
+        suff = "_" + suffix if suffix else ""
         print(
-            f"::set-output name=artifact_name::{art_name}",
+            f"::set-output name=artifact_name{suff}::{art_name}",
             flush=True,
             file=sys.stdout,
         )
         print(
-            f"::set-output name=artifact_type::{art_type}",
+            f"::set-output name=artifact_type{suff}::{art_type}",
             flush=True,
             file=sys.stdout,
         )
         print(
-            f"::set-output name=artifact_alias::{artifact_alias}",
+            f"::set-output name=artifact_alias{suff}::{artifact_alias}",
             flush=True,
             file=sys.stdout,
         )
@@ -148,6 +152,7 @@ class WaBucketRefAPI:
         return artifact_alias
 
     async def _path_exists_in_bucket(self, path: str) -> bool:
+        assert self._bucket_name
         try:
             await self.client.buckets.head_blob(
                 self._bucket_name,
@@ -175,6 +180,7 @@ class WaBucketRefAPI:
 
         wandb_run = wandb.init(
             project=self._wab_project_name,
+            entity=self._entity,
             name=w_run_name,
             job_type=w_job_type,
             settings=wandb.Settings(start_method="fork"),
@@ -214,6 +220,7 @@ class WaBucketRefAPI:
         art_alias: str,
         dst_folder: Path | None = None,
     ) -> Path:
+        self._self_init_if_needed()
         self._wandb_init_if_needed()
         artifact: wandb.Artifact = wandb.use_artifact(
             artifact_or_name=f"{art_name}:{art_alias}", type=art_type
@@ -230,6 +237,7 @@ class WaBucketRefAPI:
                 dst=dst_uri,
             )
         )
+        logger.info(f"Artifact was downloaded to '{dst_folder}'")
         return dst_folder
 
     def _get_artifact_ref(
@@ -272,3 +280,9 @@ class WaBucketRefAPI:
         assert self._n_client
         job_description = self._runner.run(self._n_client.jobs.status(job_id))
         return list(job_description.tags)
+
+    def _self_init_if_needed(self) -> None:
+        if not self._runner._started:
+            self._runner.__enter__()
+        self._runner.run(self.init_client())
+        self._runner.run(self.init_bucket())

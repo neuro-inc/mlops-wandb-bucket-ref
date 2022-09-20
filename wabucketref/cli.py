@@ -33,6 +33,14 @@ from . import WaBucketRefAPI, __version__, parse_meta
     type=str,
     help="W&B human-readable job type to group similar jobs together in the reports",
 )
+@click.option(
+    "--entity",
+    type=str,
+    help=(
+        "W&B entity. A username or team name where you're sending runs. "
+        "See https://docs.wandb.ai/ref/python/init for more details."
+    ),
+)
 @click.pass_context
 def main(
     ctx: Context,
@@ -40,11 +48,16 @@ def main(
     project_name: str | None,
     run_name: str | None,
     job_type: str | None,
+    entity: str | None,
 ) -> None:
     """
     Upload to and download from platform buckets artifacts, stored in W&B.
     """
-    api = WaBucketRefAPI(bucket, project_name)
+    api = WaBucketRefAPI(
+        bucket=bucket,
+        project_name=project_name,
+        entity=entity,
+    )
     ctx.obj = {
         "wabucket": api,
         "run_params": {
@@ -96,15 +109,27 @@ def main(
         "or directly upload the folder to W&B servers."
     ),
 )
+@click.option(
+    "-s",
+    "--suffix",
+    type=str,
+    help=(
+        "Suffix to append to the output names 'artifact_type', "
+        "'artifact_name' and 'artifact_alias', which are read by the Neuro-Flow. "
+        "This is usefull if you need to upload several artifacts "
+        "from within a single job."
+    ),
+)
 @click.pass_context
 def upload(
     ctx: Context,
     src_dir: str,
     name: str,
     type_: str,
-    alias: str,
+    alias: str | None,
     metadata: Sequence[str],
     reff: bool,
+    suffix: str | None,
 ) -> None:
     """
     Upload artifact from local folder to the bucket
@@ -124,6 +149,7 @@ def upload(
         art_alias=alias,
         art_metadata=meta,
         as_refference=reff,
+        suffix=suffix,
     )
 
 

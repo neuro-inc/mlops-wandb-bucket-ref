@@ -8,7 +8,7 @@ setup:
 
 .PHONY: lint
 lint: format
-	mypy wabucketref setup.py
+	mypy wabucketref tests setup.py
 
 .PHONY: format
 format:
@@ -18,3 +18,7 @@ format:
 image:
 	git push
 	neuro-extras image build . image:wabucketref:$(CURRENT_COMMIT) --build-arg COMMIT_SHA=$(CURRENT_COMMIT)
+
+.PHONY: test
+test:
+	pytest -vv tests
