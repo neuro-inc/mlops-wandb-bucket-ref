@@ -8,7 +8,7 @@ setup:
 
 .PHONY: lint
 lint: format
-	mypy wabucketref setup.py
+	mypy wabucketref tests setup.py
 
 .PHONY: format
 format:
