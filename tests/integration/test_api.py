@@ -1,3 +1,4 @@
+import os
 import time
 from pathlib import Path
 
@@ -13,8 +14,10 @@ def test_upload_and_download(
     tmp_path: Path,
     files_hasher: RecuresiveHasher,
 ) -> None:
+    os.environ["NEURO_JOB_ID"] = "test-job"  # to cover also neuro job metainfo fetch
 
     api = WaBucketRefAPI(bucket=bucket.name, project_name="wabucket-test")
+    api.wandb_start_run()
     alias = api.upload_artifact(
         src_folder=rand_artifact_dir,
         art_name="my_test_artifact",

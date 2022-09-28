@@ -42,7 +42,7 @@ class WaBucketRefAPI:
         self._bucket: Bucket | None = None
         self._entity = entity or os.environ.get("WANDB_ENTITY")
 
-    async def init_client(self) -> Client:
+    async def _init_client(self) -> Client:
         if self._n_client is not None and not self._n_client._closed:
             return self._n_client
         client = await Factory().get()
@@ -54,7 +54,7 @@ class WaBucketRefAPI:
         assert self._n_client is not None
         return self._n_client
 
-    async def init_bucket(self) -> Bucket:
+    async def _init_bucket(self) -> Bucket:
         if not self._bucket:
             assert self._bucket_name, "Bucket name is not provided."
             self._bucket = await self.client.buckets.get(self._bucket_name)
@@ -88,7 +88,7 @@ class WaBucketRefAPI:
         overwrite: bool = False,
         suffix: str | None = None,
     ) -> str:
-        self._self_init_if_needed()
+        self._neuro_init_if_needed()
         self._wandb_init_if_needed()
         artifact = wandb.Artifact(name=art_name, type=art_type, metadata=art_metadata)
         artifact_alias = self._get_artifact_alias(art_alias)
@@ -175,6 +175,7 @@ class WaBucketRefAPI:
         w_job_type: str | None = None,
         run_args: RunArgsType | None = None,
     ) -> Run:
+        self._neuro_init_if_needed()
         if wandb.run is not None:
             raise RuntimeError(f"W&B has registerred run {wandb.run.name}")
 
@@ -220,7 +221,7 @@ class WaBucketRefAPI:
         art_alias: str,
         dst_folder: Path | None = None,
     ) -> Path:
-        self._self_init_if_needed()
+        self._neuro_init_if_needed()
         self._wandb_init_if_needed()
         artifact: wandb.Artifact = wandb.use_artifact(
             artifact_or_name=f"{art_name}:{art_alias}", type=art_type
@@ -281,8 +282,8 @@ class WaBucketRefAPI:
         job_description = self._runner.run(self._n_client.jobs.status(job_id))
         return list(job_description.tags)
 
-    def _self_init_if_needed(self) -> None:
+    def _neuro_init_if_needed(self) -> None:
         if not self._runner._started:
             self._runner.__enter__()
-        self._runner.run(self.init_client())
-        self._runner.run(self.init_bucket())
+        self._runner.run(self._init_client())
+        self._runner.run(self._init_bucket())
