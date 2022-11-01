@@ -22,3 +22,15 @@ image:
 .PHONY: test
 test:
 	pytest -vv tests
+
+.PHONY: changelog-draft
+changelog-draft: docs
+	towncrier --draft --name `python setup.py --name` --version v`python setup.py --version`
+
+.PHONY: changelog
+changelog: docs
+	towncrier --name `python setup.py --name` --version v`python setup.py --version`
+
+.PHONY: docs
+docs:
+	build-tools/cli-help-generator.py build-tools/CLI.in.md CLI.md
