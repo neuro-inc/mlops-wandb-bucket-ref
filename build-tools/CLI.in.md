@@ -1,3 +1,3 @@
-# CLI reference
+# WaBucketRef CLI reference
 
 {cli_doc}

@@ -1,4 +1,4 @@
-# CLI reference
+# WaBucketRef CLI reference
 
 ## wabucket
 
