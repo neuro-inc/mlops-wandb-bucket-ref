@@ -30,3 +30,7 @@ changelog-draft:
 .PHONY: changelog
 changelog:
 	towncrier --name `python setup.py --name` --version v`python setup.py --version`
+
+.PHONY: docs
+docs:
+	build-tools/cli-help-generator.py build-tools/CLI.in.md CLI.md
