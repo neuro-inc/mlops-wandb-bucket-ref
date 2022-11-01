@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Dict, Union
 
 import wandb
+from aiohttp import ClientError, ServerTimeoutError
 from neuro_cli.asyncio_utils import Runner
 from neuro_sdk import Bucket, Client, Factory, ResourceNotFound
 from wandb.wandb_run import Run
@@ -66,7 +67,7 @@ class WaBucketRefAPI:
         return self._bucket
 
     def close(self) -> None:
-        if self._n_client is not None:
+        if self._n_client is not None and not self._n_client.closed:
             self._runner.run(self._n_client.close())
         try:
             # Suppress prints unhandled exceptions
@@ -220,6 +221,7 @@ class WaBucketRefAPI:
         art_type: str,
         art_alias: str,
         dst_folder: Path | None = None,
+        retries: int = 5,
     ) -> Path:
         self._neuro_init_if_needed()
         self._wandb_init_if_needed()
@@ -231,13 +233,23 @@ class WaBucketRefAPI:
         if dst_folder is None:
             dst_folder = Path(tempfile.mkdtemp())
         dst_uri = URL(f"file:{dst_folder.resolve()}")
-
-        self._runner.run(
-            self.client.buckets.download_dir(
-                src=blob_uri,
-                dst=dst_uri,
-            )
-        )
+        for i in range(retries):
+            try:
+                logger.info(f"Downloading {blob_uri} -> {dst_folder}")
+                self._runner.run(
+                    self.client.buckets.download_dir(
+                        src=blob_uri,
+                        dst=dst_uri,
+                        continue_=bool(i),
+                    )
+                )
+                break
+            except (ServerTimeoutError, ClientError) as e:
+                logger.error(e)
+                backoff_time = 2 ** (i + 1) - 1
+                logger.warning(f"Retry {i + 1}/{retries} in {backoff_time} sec.")
+                time.sleep(backoff_time)
+                self._neuro_init_if_needed()
         logger.info(f"Artifact was downloaded to '{dst_folder}'")
         return dst_folder
 
