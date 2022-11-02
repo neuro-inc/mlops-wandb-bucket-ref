@@ -1,10 +1,14 @@
+from __future__ import annotations
+
 import hashlib
 import uuid
+from dataclasses import dataclass
 from pathlib import Path
 from typing import AsyncGenerator, Callable, Generator
 
 import pytest
 from neuro_sdk import Bucket, Client, get
+from yarl import URL
 
 
 @pytest.fixture
@@ -56,3 +60,32 @@ def files_hasher() -> RecuresiveHasher:
         return hasher.hexdigest()
 
     return _hasher
+
+
+@dataclass()
+class BucketArtifactPath:
+    bucket: Bucket
+    bucket_path: str
+    hash: str | None = None
+
+
+@pytest.fixture
+async def bucket_artifact(
+    neuro_client: Client,
+    bucket: Bucket,
+    rand_artifact_dir: Path,
+    files_hasher: RecuresiveHasher,
+) -> AsyncGenerator[BucketArtifactPath, None]:
+    bucket_name = f"wabucket-test-{uuid.uuid4().hex[:10]}"
+    bucket = await neuro_client.buckets.create(
+        name=bucket_name,
+    )
+    artifact_path = "artifact"
+    await neuro_client.buckets.upload_dir(
+        URL(rand_artifact_dir.as_uri()),
+        bucket.uri / artifact_path,
+    )
+    bp = BucketArtifactPath(bucket, artifact_path, hash=files_hasher(rand_artifact_dir))
+    yield bp
+    await neuro_client.buckets.blob_rm(bucket.uri, recursive=True)
+    await neuro_client.buckets.rm(bucket_name)
