@@ -24,11 +24,11 @@ test:
 	pytest -vv tests
 
 .PHONY: changelog-draft
-changelog-draft: docs
+changelog-draft:
 	towncrier --draft --name `python setup.py --name` --version v`python setup.py --version`
 
 .PHONY: changelog
-changelog: docs
+changelog:
 	towncrier --name `python setup.py --name` --version v`python setup.py --version`
 
 .PHONY: docs
