@@ -291,11 +291,6 @@ def link(
     """
     ref_api: WaBucketRefAPI = ctx.obj["wabucket"]
     meta = parse_meta(metadata)
-    # ref_api.wandb_start_run(
-    #     w_run_name=ctx.obj["run_params"]["w_run_name"],
-    #     w_job_type=ctx.obj["run_params"]["w_job_type"],
-    # )
-
     ref_api.link(
         bucket_path=bucket_path,
         art_name=name,
