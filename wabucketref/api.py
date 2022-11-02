@@ -237,7 +237,7 @@ class WaBucketRefAPI:
         art_alias: str,
     ) -> URL:
         try:
-            blob_ref = artifact.manifest.entries[DEFAULT_REF_NAME].ref
+            blob_ref = str(artifact.manifest.entries[DEFAULT_REF_NAME].ref)
             assert isinstance(blob_ref, str)
         except KeyError:
             # backward support, artifact was saved with wabucket version < 22.7.0
