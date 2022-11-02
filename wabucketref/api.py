@@ -8,13 +8,13 @@ import sys
 import tempfile
 import time
 import uuid
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Dict, Union
 
 import wandb
 from aiohttp import ClientError, ServerTimeoutError
 from neuro_cli.asyncio_utils import Runner
-from neuro_sdk import Bucket, Client, Factory, ResourceNotFound
+from neuro_sdk import Bucket, Client, Factory
 from wandb.wandb_run import Run
 from yarl import URL
 
@@ -101,15 +101,15 @@ class WaBucketRefAPI:
                 f"Uploading artifact from '{src_as_uri}' to {artifact_bucket_root} ..."
             )
 
-            root_exists = self._runner.run(self._path_exists_in_bucket(bucket_path))
+            root_exists = self._runner.run(self._dir_exists_in_bucket(bucket_path))
             if not overwrite and root_exists:
                 raise RuntimeError(
-                    f"Artifact {artifact_bucket_root} exists, "
-                    "overwrite is not allowed."
+                    f"Blob at {artifact_bucket_root} already exists, "
+                    "overwrite is not enabled."
                 )
             elif overwrite and root_exists:
                 logger.warning(
-                    f"Artifact {artifact_bucket_root} exists, will be overwriten."
+                    f"Blob {artifact_bucket_root} exists, will be overwriten!"
                 )
                 self._runner.run(
                     self.client.buckets.blob_rm(artifact_bucket_root / "*")
@@ -131,37 +131,13 @@ class WaBucketRefAPI:
             logger.info(f"Uploading artifact {src_folder} as directory...")
             artifact.add_dir(str(src_folder))
         wandb.log_artifact(artifact, aliases=[artifact_alias])
-
-        # neuro-flow reads ::set-output... if only they are at the beginning of a string
-        suff = "_" + suffix if suffix else ""
-        print(
-            f"::set-output name=artifact_name{suff}::{art_name}",
-            flush=True,
-            file=sys.stdout,
-        )
-        print(
-            f"::set-output name=artifact_type{suff}::{art_type}",
-            flush=True,
-            file=sys.stdout,
-        )
-        print(
-            f"::set-output name=artifact_alias{suff}::{artifact_alias}",
-            flush=True,
-            file=sys.stdout,
-        )
-        time.sleep(1)  # https://github.com/neuro-inc/mlops-wandb-bucket-ref/issues/16
+        self._set_neuro_flow_outputs(art_name, art_type, artifact_alias, suffix)
         return artifact_alias
 
-    async def _path_exists_in_bucket(self, path: str) -> bool:
+    async def _dir_exists_in_bucket(self, path: str) -> bool:
         assert self._bucket_name
-        try:
-            await self.client.buckets.head_blob(
-                self._bucket_name,
-                key=path,
-            )
-            return True
-        except ResourceNotFound:
-            return False
+        async with self.client.buckets._get_bucket_fs(self.bucket.uri) as bfs:
+            return await bfs.is_dir(PurePosixPath(path))
 
     def _wandb_init_if_needed(self, run_args: RunArgsType | None = None) -> None:
         if wandb.run is None:
@@ -299,3 +275,76 @@ class WaBucketRefAPI:
             self._runner.__enter__()
         self._runner.run(self._init_client())
         self._runner.run(self._init_bucket())
+
+    def _set_neuro_flow_outputs(
+        self,
+        art_name: str,
+        art_type: str,
+        art_alias: str | None = None,
+        suffix: str | None = None,
+    ) -> None:
+        # neuro-flow reads ::set-output... if only they are at the beginning of a string
+        suff = "_" + suffix if suffix else ""
+        print(
+            f"::set-output name=artifact_name{suff}::{art_name}",
+            flush=True,
+            file=sys.stdout,
+        )
+        print(
+            f"::set-output name=artifact_type{suff}::{art_type}",
+            flush=True,
+            file=sys.stdout,
+        )
+        print(
+            f"::set-output name=artifact_alias{suff}::{art_alias}",
+            flush=True,
+            file=sys.stdout,
+        )
+        time.sleep(1)  # https://github.com/neuro-inc/mlops-wandb-bucket-ref/issues/16
+
+    def link(
+        self,
+        bucket_path: str,
+        art_name: str,
+        art_type: str,
+        art_alias: str | None = None,
+        art_metadata: dict | None = None,  # type: ignore
+        suffix: str | None = None,
+    ) -> str:
+        """Create Artifact in W&B system out of existing binaries in Neu.ro bucket.
+
+        Args:
+            bucket_path (str): directory path within the Neu.ro bucket
+            art_name (str): Artifact name for W&B
+            art_type (str): Artifact type for W&B
+            art_alias (str | None, optional): Artifact alias for W&B. Defaults to None.
+                If None object -> the UUID4 will be assigned
+                "!run-config-hash" string -> a hash of `wandb.run.config`
+                    values will be used
+                other string object -> it will be used
+            art_metadata (dict | None, optional): Metadata attached to the W&B artifact.
+                Defaults to None.
+
+        Raises:
+            ValueError: If blob objet does not exist or is not a directory
+
+        Returns:
+            str: artifact alias
+        """
+        self._neuro_init_if_needed()
+        full_path = self.bucket.uri / bucket_path
+        logger.info(f"Creating W&B Artifact from '{full_path}'")
+        if not self._runner.run(self._dir_exists_in_bucket(bucket_path)):
+            raise ValueError(f"{full_path} does not exist or not a directory.")
+
+        self._wandb_init_if_needed()
+        artifact = wandb.Artifact(name=art_name, type=art_type, metadata=art_metadata)
+        artifact_alias = self._get_artifact_alias(art_alias)
+        artifact.add_reference(
+            name=DEFAULT_REF_NAME,
+            uri=str(full_path),
+            checksum=False,
+        )
+        wandb.log_artifact(artifact, aliases=[artifact_alias])
+        self._set_neuro_flow_outputs(art_name, art_type, artifact_alias, suffix)
+        return artifact_alias
