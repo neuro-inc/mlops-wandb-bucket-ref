@@ -4,6 +4,17 @@
 
 [comment]: # (towncrier release notes start)
 
+wabucketref v22.11.1 (2022-11-30)
+=================================
+
+
+Misc
+----
+
+
+- Bump minimal Python requirements to 3.8.1 due to 3.7.x EOL. ([#116](https://github.com/neuro-inc/mlops-wandb-bucket-ref/issues/116))
+
+
 wabucketref v22.11.0 (2022-11-02)
 =================================
 
