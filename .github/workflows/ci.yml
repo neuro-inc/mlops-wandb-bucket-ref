@@ -25,22 +25,22 @@ jobs:
       with:
         ref: ${{ github.event.pull_request.head.sha }}
 
-    - name: Setup Python 3.7
+    - name: Setup Python 3.8
       uses: actions/setup-python@v4
       with:
-        python-version: '3.7'
+        python-version: '3.8'
 
     - name: Cache Python and its deps
       uses: actions/cache@v3
       with:
-        key: ${{ runner.os }}-python-3.7-${{ hashFiles('requirements/*.txt') }}
+        key: ${{ runner.os }}-python-3.8-${{ hashFiles('requirements/*.txt') }}
         path: ${{ env.pythonLocation }}
 
     - name: Cache pre-commit hooks
       uses: actions/cache@v2
       with:
         path: ~/.cache/pre-commit
-        key: ${{ runner.os }}-pre-commit-python-3.7-${{ hashFiles('.pre-commit-config.yaml') }}
+        key: ${{ runner.os }}-pre-commit-python-3.8-${{ hashFiles('.pre-commit-config.yaml') }}
 
     - name: Install dependencies
       run: |
@@ -70,22 +70,22 @@ jobs:
       with:
         ref: ${{ github.event.pull_request.head.sha }}
 
-    - name: Setup Python 3.7
+    - name: Setup Python 3.8
       uses: actions/setup-python@v4
       with:
-        python-version: '3.7'
+        python-version: '3.8'
 
     - name: Cache Python and its deps
       uses: actions/cache@v3
       with:
-        key: ${{ runner.os }}-python-3.7-${{ hashFiles('requirements/*.txt') }}
+        key: ${{ runner.os }}-python-3.8-${{ hashFiles('requirements/*.txt') }}
         path: ${{ env.pythonLocation }}
 
     - name: Cache pre-commit hooks
       uses: actions/cache@v2
       with:
         path: ~/.cache/pre-commit
-        key: ${{ runner.os }}-pre-commit-python-3.7-${{ hashFiles('.pre-commit-config.yaml') }}
+        key: ${{ runner.os }}-pre-commit-python-3.8-${{ hashFiles('.pre-commit-config.yaml') }}
 
     - name: Install dependencies
       run: |
