@@ -2,6 +2,7 @@ CURRENT_COMMIT = $(shell git rev-parse HEAD)
 
 .PHONY: setup
 setup:
+	pip install -U pip setuptools
 	pip install -r requirements/python-dev.txt
 	pre-commit install
 	pip install -e .
