@@ -1,7 +1,7 @@
 -r python-base.txt
 
 mypy==1.0.0
-pre-commit==3.0.4
+pre-commit==3.1.1
 pytest==7.2.1
 pytest-asyncio==0.20.3
 towncrier==22.12.0
