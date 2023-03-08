@@ -16,7 +16,7 @@ setup(
     python_requires=">=3.8.1",
     install_requires=[
         "neuro-cli>=22.7.0,<22.7.2",
-        "wandb[aws]>=0.10.33,<0.13.11",
+        "wandb[aws]>=0.10.33,<0.13.12",
     ],
     include_package_data=True,
     description=(
