@@ -9,7 +9,7 @@ from click import Context
 from . import WaBucketRefAPI, __version__, parse_meta
 
 
-@click.group()
+@click.group()  # type: ignore[arg-type]
 @click.version_option(
     version=__version__, message="W&B bucket artifacts package version: %(version)s"
 )
@@ -83,7 +83,7 @@ def main(
     ctx.call_on_close(api.close)
 
 
-@main.command()
+@main.command()  # type: ignore
 @click.argument("src_dir")
 @click.option(
     "-n",
@@ -174,7 +174,7 @@ def upload(
     )
 
 
-@main.command()
+@main.command()  # type: ignore
 @click.argument("artifact_type")
 @click.argument("artifact_name")
 @click.argument("artifact_alias")
@@ -227,7 +227,7 @@ def download(
     )
 
 
-@main.command()
+@main.command()  # type: ignore
 @click.argument("bucket_path")
 @click.option(
     "-n",
