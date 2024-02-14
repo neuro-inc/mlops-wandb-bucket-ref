@@ -140,9 +140,9 @@ jobs:
       run: |
         docker build \
           -t "ghcr.io/neuro-inc/wabucketref:${VERSION}" \
-          -t "ghcr.io/neuro-inc/wabucketref:latest" \
           --build-arg COMMIT_SHA=${COMMIT_SHA} \
-          .
+          . \
+          -f python37.Dockerfile
     - name: Push
       env:
         VERSION: ${{ needs.lint.outputs.version }}

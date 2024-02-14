@@ -13,10 +13,12 @@ with open("wabucketref/__init__.py") as f:
 setup(
     name="wabucketref",
     version=version,
-    python_requires=">=3.8.1",
+    python_requires=">=3.7.17",
     install_requires=[
-        "neuro-cli>=23.7.0",
+        "neuro-cli>=22.7.1",
         "wandb[aws]>=0.10.33,<=0.15.5",
+        "boto3==1.28.17",
+        "aiobotocore~=2.6.0",
     ],
     include_package_data=True,
     description=(

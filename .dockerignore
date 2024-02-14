@@ -1,2 +1,5 @@
 **
 !/Dockerfile
+!/wabucketref
+!/requirements
+!/setup.*
