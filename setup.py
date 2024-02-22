@@ -13,7 +13,7 @@ with open("wabucketref/__init__.py") as f:
 setup(
     name="wabucketref",
     version=version,
-    python_requires=">=3.7.17",
+    python_requires=">=3.7.13",
     install_requires=[
         "neuro-cli>=22.7.1",
         "wandb[aws]>=0.10.33,<=0.15.5",
