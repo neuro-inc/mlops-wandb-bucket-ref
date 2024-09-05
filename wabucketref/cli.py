@@ -9,7 +9,7 @@ from click import Context
 from . import WaBucketRefAPI, __version__, parse_meta
 
 
-@click.group()  # type: ignore[arg-type]
+@click.group()
 @click.version_option(
     version=__version__, message="W&B bucket artifacts package version: %(version)s"
 )
@@ -83,7 +83,7 @@ def main(
     ctx.call_on_close(api.close)
 
 
-@main.command()  # type: ignore
+@main.command()
 @click.argument("src_dir")
 @click.option(
     "-n",
@@ -136,7 +136,7 @@ def main(
     type=str,
     help=(
         "Suffix to append to the output names `artifact_type`, "
-        "`artifact_name` and `artifact_alias`, which are read by the Neuro-Flow. "
+        "`artifact_name` and `artifact_alias`, which are read by the Apolo-Flow. "
         "This is usefull if you need to upload several artifacts "
         "from within a single job."
     ),
@@ -174,7 +174,7 @@ def upload(
     )
 
 
-@main.command()  # type: ignore
+@main.command()
 @click.argument("artifact_type")
 @click.argument("artifact_name")
 @click.argument("artifact_alias")
@@ -227,7 +227,7 @@ def download(
     )
 
 
-@main.command()  # type: ignore
+@main.command()
 @click.argument("bucket_path")
 @click.option(
     "-n",
@@ -271,7 +271,7 @@ def download(
     type=str,
     help=(
         "Suffix to append to the output names `artifact_type`, "
-        "`artifact_name` and `artifact_alias`, which are read by the Neuro-Flow. "
+        "`artifact_name` and `artifact_alias`, which are read by the Apolo-Flow. "
         "This is usefull if you need to upload several artifacts "
         "from within a single job."
     ),

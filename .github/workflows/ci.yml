@@ -20,42 +20,42 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
-    - name: Checkout commit
-      uses: actions/checkout@v3
-      with:
-        ref: ${{ github.event.pull_request.head.sha }}
+      - name: Checkout commit
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
-    - name: Setup Python 3.11
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
 
-    - name: Cache Python and its deps
-      uses: actions/cache@v3
-      with:
-        key: ${{ runner.os }}-python-3.11-${{ hashFiles('requirements/*.txt') }}
-        path: ${{ env.pythonLocation }}
+      - name: Cache Python and its deps
+        uses: actions/cache@v3
+        with:
+          key: ${{ runner.os }}-python-3.11-${{ hashFiles('requirements/*.txt') }}
+          path: ${{ env.pythonLocation }}
 
-    - name: Cache pre-commit hooks
-      uses: actions/cache@v2
-      with:
-        path: ~/.cache/pre-commit
-        key: ${{ runner.os }}-pre-commit-python-3.11-${{ hashFiles('.pre-commit-config.yaml') }}
+      - name: Cache pre-commit hooks
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pre-commit
+          key: ${{ runner.os }}-pre-commit-python-3.11-${{ hashFiles('.pre-commit-config.yaml') }}
 
-    - name: Install dependencies
-      run: |
-        python -m pip install -U pip
-        make setup
+      - name: Install dependencies
+        run: |
+          python -m pip install -U pip
+          make setup
 
-    - name: Run linters
-      run: |
-        echo Linting ${{ github.event.pull_request.head.sha || github.sha }}
-        make lint
+      - name: Run linters
+        run: |
+          echo Linting ${{ github.event.pull_request.head.sha || github.sha }}
+          make lint
 
-    - name: Save the package version
-      id: version
-      run: |
-        echo "version=$(python setup.py --version)" >> $GITHUB_OUTPUT
+      - name: Save the package version
+        id: version
+        run: |
+          echo "version=$(python setup.py --version)" >> $GITHUB_OUTPUT
 
   test:
     if: |
@@ -65,46 +65,46 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-    - name: Checkout commit
-      uses: actions/checkout@v3
-      with:
-        ref: ${{ github.event.pull_request.head.sha }}
+      - name: Checkout commit
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
-    - name: Setup Python 3.11
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
 
-    - name: Cache Python and its deps
-      uses: actions/cache@v3
-      with:
-        key: ${{ runner.os }}-python-3.11-${{ hashFiles('requirements/*.txt') }}
-        path: ${{ env.pythonLocation }}
+      - name: Cache Python and its deps
+        uses: actions/cache@v3
+        with:
+          key: ${{ runner.os }}-python-3.11-${{ hashFiles('requirements/*.txt') }}
+          path: ${{ env.pythonLocation }}
 
-    - name: Cache pre-commit hooks
-      uses: actions/cache@v2
-      with:
-        path: ~/.cache/pre-commit
-        key: ${{ runner.os }}-pre-commit-python-3.11-${{ hashFiles('.pre-commit-config.yaml') }}
+      - name: Cache pre-commit hooks
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pre-commit
+          key: ${{ runner.os }}-pre-commit-python-3.11-${{ hashFiles('.pre-commit-config.yaml') }}
 
-    - name: Install dependencies
-      run: |
-        python -m pip install -U pip
-        make setup
+      - name: Install dependencies
+        run: |
+          python -m pip install -U pip
+          make setup
 
-    - name: Configure Neu.ro CLI
-      env:
-        NEURO_TOKEN: ${{ secrets.COOKIECUTTER_TEST_E2E_TOKEN }}
-        NEURO_STAGING_URL: ${{ secrets.NEURO_STAGING_URL }}
-      run: |
-        neuro config login-with-token ${{ env.NEURO_TOKEN }} ${{ env.NEURO_STAGING_URL }}
-        neuro config switch-cluster onprem-poc
+      - name: Configure Neu.ro CLI
+        env:
+          NEURO_TOKEN: ${{ secrets.COOKIECUTTER_TEST_E2E_TOKEN }}
+          NEURO_STAGING_URL: ${{ secrets.NEURO_STAGING_URL }}
+        run: |
+          apolo config login-with-token ${{ env.NEURO_TOKEN }} ${{ env.NEURO_STAGING_URL }}
+          apolo config switch-cluster onprem-poc
 
-    - name: Run tests
-      env:
-        WANDB_API_KEY: ${{ secrets.WANDB_API_KEY }}
-      run: |
-        make test
+      - name: Run tests
+        env:
+          WANDB_API_KEY: ${{ secrets.WANDB_API_KEY }}
+        run: |
+          make test
 
   deploy:
     name: Build and push Docker image
@@ -112,39 +112,39 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
     steps:
-    - name: Checkout commit
-      uses: actions/checkout@v3
+      - name: Checkout commit
+        uses: actions/checkout@v3
 
-    - name: Sanity check for tag and version
-      run: |
-        export VERSION=${{ needs.lint.outputs.version }}
-        if [ "${{ github.ref }}" != "refs/tags/v$VERSION" ]
-        then
-          echo "Git tag '${{ github.ref }}' differs from hard-coded package version 'v$VERSION'"
-          exit 1
-        else
-          echo "OK, git tag matches hard-coded package version: 'v$VERSION'"
-        fi
+      - name: Sanity check for tag and version
+        run: |
+          export VERSION=${{ needs.lint.outputs.version }}
+          if [ "${{ github.ref }}" != "refs/tags/v$VERSION" ]
+          then
+            echo "Git tag '${{ github.ref }}' differs from hard-coded package version 'v$VERSION'"
+            exit 1
+          else
+            echo "OK, git tag matches hard-coded package version: 'v$VERSION'"
+          fi
 
-    - name: Login to Github container registry
-      uses: docker/login-action@v2
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Login to Github container registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Build
-      env:
-        VERSION: ${{ needs.lint.outputs.version }}
-        COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-      run: |
-        docker build \
-          -t "ghcr.io/neuro-inc/wabucketref:${VERSION}" \
-          -t "ghcr.io/neuro-inc/wabucketref:latest" \
-          --build-arg COMMIT_SHA=${COMMIT_SHA} \
-          .
-    - name: Push
-      env:
-        VERSION: ${{ needs.lint.outputs.version }}
-      run: |
-        docker push ghcr.io/neuro-inc/wabucketref --all-tags
+      - name: Build
+        env:
+          VERSION: ${{ needs.lint.outputs.version }}
+          COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          docker build \
+            -t "ghcr.io/neuro-inc/wabucketref:${VERSION}" \
+            -t "ghcr.io/neuro-inc/wabucketref:latest" \
+            --build-arg COMMIT_SHA=${COMMIT_SHA} \
+            .
+      - name: Push
+        env:
+          VERSION: ${{ needs.lint.outputs.version }}
+        run: |
+          docker push ghcr.io/neuro-inc/wabucketref --all-tags

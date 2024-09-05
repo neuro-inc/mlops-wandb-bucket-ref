@@ -9,12 +9,12 @@ import tempfile
 import time
 import uuid
 from pathlib import Path, PurePosixPath
-from typing import Dict, Union
+from typing import Any, Dict, Union
 
 import wandb
 from aiohttp import ClientError, ServerTimeoutError
-from neuro_cli.asyncio_utils import Runner
-from neuro_sdk import Bucket, Client, Factory
+from apolo_cli.asyncio_utils import Runner
+from apolo_sdk import Bucket, Client, Factory
 from wandb.wandb_run import Run
 from yarl import URL
 
@@ -22,7 +22,7 @@ from yarl import URL
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-RunArgsType = Union[argparse.Namespace, Dict, str]
+RunArgsType = Union[argparse.Namespace, Dict[str, Any], str]
 DEFAULT_REF_NAME = "platform_blob"
 
 
@@ -72,7 +72,7 @@ class WaBucketRefAPI:
         try:
             # Suppress prints unhandled exceptions
             # on event loop closing
-            sys.stderr = None  # type: ignore
+            sys.stderr = None
             if self._runner._started:
                 self._runner.__exit__(*sys.exc_info())
         finally:
@@ -89,7 +89,7 @@ class WaBucketRefAPI:
         overwrite: bool = False,
         suffix: str | None = None,
     ) -> str:
-        self._neuro_init_if_needed()
+        self._apolo_init_if_needed()
         self._wandb_init_if_needed()
         artifact = wandb.Artifact(name=art_name, type=art_type, metadata=art_metadata)
         artifact_alias = self._get_artifact_alias(art_alias)
@@ -130,8 +130,8 @@ class WaBucketRefAPI:
         else:
             logger.info(f"Uploading artifact {src_folder} as directory...")
             artifact.add_dir(str(src_folder))
-        wandb.log_artifact(artifact, aliases=[artifact_alias])
-        self._set_neuro_flow_outputs(art_name, art_type, artifact_alias, suffix)
+        wandb.log_artifact(artifact, aliases=[artifact_alias])  # type: ignore
+        self._set_apolo_flow_outputs(art_name, art_type, artifact_alias, suffix)
         return artifact_alias
 
     async def _dir_exists_in_bucket(self, path: str) -> bool:
@@ -152,7 +152,7 @@ class WaBucketRefAPI:
         w_job_type: str | None = None,
         run_args: RunArgsType | None = None,
     ) -> Run:
-        self._neuro_init_if_needed()
+        self._apolo_init_if_needed()
         if wandb.run is not None:
             raise RuntimeError(f"W&B has registerred run {wandb.run.name}")
 
@@ -163,7 +163,7 @@ class WaBucketRefAPI:
             job_type=w_job_type,
             settings=wandb.Settings(start_method="fork"),
             config=run_args,  # type: ignore
-            tags=self._try_get_neuro_tags(),
+            tags=self._try_get_apolo_tags(),
         )
         if not isinstance(wandb_run, Run):
             raise RuntimeError(f"Failed to initialize W&B run, got: {wandb_run:r}")
@@ -185,7 +185,7 @@ class WaBucketRefAPI:
             cfg = wandb.run.config
             run_config_str = " ".join([f"{k}={v}" for k, v in sorted(cfg.items())])
             alias = hashlib.sha256(run_config_str.encode("UTF-8")).hexdigest()
-        elif type(art_alias) == str:
+        elif isinstance(art_alias, str):
             alias = art_alias
         else:
             raise ValueError(f"Wrong value for artifact alias: {art_alias}.")
@@ -199,9 +199,9 @@ class WaBucketRefAPI:
         dst_folder: Path | None = None,
         retries: int = 5,
     ) -> Path:
-        self._neuro_init_if_needed()
+        self._apolo_init_if_needed()
         self._wandb_init_if_needed()
-        artifact: wandb.Artifact = wandb.use_artifact(
+        artifact: wandb.Artifact = wandb.use_artifact(  # type: ignore
             artifact_or_name=f"{art_name}:{art_alias}", type=art_type
         )
         blob_uri = self._get_artifact_ref(artifact, art_name, art_type, art_alias)
@@ -225,7 +225,7 @@ class WaBucketRefAPI:
                 backoff_time = 2 ** (i + 1) - 1
                 logger.warning(f"Retry {i + 1}/{retries} in {backoff_time} sec.")
                 time.sleep(backoff_time)
-                self._neuro_init_if_needed()
+                self._apolo_init_if_needed()
         logger.info(f"Artifact was downloaded to '{dst_folder}'")
         return dst_folder
 
@@ -250,40 +250,40 @@ class WaBucketRefAPI:
 
         return URL(blob_ref)
 
-    def _try_get_neuro_tags(self) -> list[str] | None:
+    def _try_get_apolo_tags(self) -> list[str] | None:
         job_id = os.environ.get("NEURO_JOB_ID")
         if job_id:
-            # assuming the neuro platform job
+            # assuming the platform job
             result = [
                 f"job_id:{job_id}",
                 f"job_name:{os.environ.get('NEURO_JOB_NAME')}",
                 f"owner:{os.environ.get('NEURO_JOB_OWNER')}",
             ]
-            result.extend(self._get_neuro_job_tags(job_id))
+            result.extend(self._get_apolo_job_tags(job_id))
             return result
         else:
             return None
 
-    def _get_neuro_job_tags(self, job_id: str) -> list[str]:
+    def _get_apolo_job_tags(self, job_id: str) -> list[str]:
         assert self._runner
         assert self._n_client
         job_description = self._runner.run(self._n_client.jobs.status(job_id))
         return list(job_description.tags)
 
-    def _neuro_init_if_needed(self) -> None:
+    def _apolo_init_if_needed(self) -> None:
         if not self._runner._started:
             self._runner.__enter__()
         self._runner.run(self._init_client())
         self._runner.run(self._init_bucket())
 
-    def _set_neuro_flow_outputs(
+    def _set_apolo_flow_outputs(
         self,
         art_name: str,
         art_type: str,
         art_alias: str | None = None,
         suffix: str | None = None,
     ) -> None:
-        # neuro-flow reads ::set-output... if only they are at the beginning of a string
+        # apolo-flow reads ::set-output... if only they are at the beginning of a string
         suff = "_" + suffix if suffix else ""
         print(
             f"::set-output name=artifact_name{suff}::{art_name}",
@@ -331,7 +331,7 @@ class WaBucketRefAPI:
         Returns:
             str: artifact alias
         """
-        self._neuro_init_if_needed()
+        self._apolo_init_if_needed()
         full_path = self.bucket.uri / bucket_path
         logger.info(f"Creating W&B Artifact from '{full_path}'")
         if not self._runner.run(self._dir_exists_in_bucket(bucket_path)):
@@ -345,6 +345,6 @@ class WaBucketRefAPI:
             uri=str(full_path),
             checksum=False,
         )
-        wandb.log_artifact(artifact, aliases=[artifact_alias])
-        self._set_neuro_flow_outputs(art_name, art_type, artifact_alias, suffix)
+        wandb.log_artifact(artifact, aliases=[artifact_alias])  # type: ignore
+        self._set_apolo_flow_outputs(art_name, art_type, artifact_alias, suffix)
         return artifact_alias
