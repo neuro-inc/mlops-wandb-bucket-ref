@@ -1,3 +1,6 @@
+requires = ["setuptools>=51", "wheel>=0.36"]
+build-backend = "setuptools.build_meta"
+
 [tool.towncrier]
     package = "wabucketref"
     package_dir = "."

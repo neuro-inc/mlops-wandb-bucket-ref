@@ -18,7 +18,7 @@ format:
 .PHONY: image
 image:
 	git push
-	neuro-extras image build . image:wabucketref:$(CURRENT_COMMIT) --build-arg COMMIT_SHA=$(CURRENT_COMMIT)
+	apolo-extras image build . image:wabucketref:$(CURRENT_COMMIT) --build-arg COMMIT_SHA=$(CURRENT_COMMIT)
 
 .PHONY: test
 test:
