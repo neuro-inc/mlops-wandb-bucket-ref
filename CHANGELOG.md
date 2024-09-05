@@ -4,6 +4,17 @@
 
 [comment]: # (towncrier release notes start)
 
+wabucketref v24.9.0 (2024-09-05)
+================================
+
+
+Misc
+----
+
+
+- Update apolo-cli and other dependencies. ([#143](https://github.com/neuro-inc/mlops-wandb-bucket-ref/issues/143))
+
+
 wabucketref v22.11.1 (2022-11-30)
 =================================
 
