@@ -31,13 +31,13 @@ jobs:
           python-version: "3.11"
 
       - name: Cache Python and its deps
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           key: ${{ runner.os }}-python-3.11-${{ hashFiles('requirements/*.txt') }}
           path: ${{ env.pythonLocation }}
 
       - name: Cache pre-commit hooks
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.cache/pre-commit
           key: ${{ runner.os }}-pre-commit-python-3.11-${{ hashFiles('.pre-commit-config.yaml') }}
@@ -76,13 +76,13 @@ jobs:
           python-version: "3.11"
 
       - name: Cache Python and its deps
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           key: ${{ runner.os }}-python-3.11-${{ hashFiles('requirements/*.txt') }}
           path: ${{ env.pythonLocation }}
 
       - name: Cache pre-commit hooks
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.cache/pre-commit
           key: ${{ runner.os }}-pre-commit-python-3.11-${{ hashFiles('.pre-commit-config.yaml') }}
