@@ -1,4 +1,4 @@
-FROM ghcr.io/neuro-inc/apolo-extras:24.8.0
+FROM ghcr.io/neuro-inc/apolo-extras:24.9.0
 
 LABEL org.opencontainers.image.source = "https://github.com/neuro-inc/mlops-wandb-bucket-ref"
 
