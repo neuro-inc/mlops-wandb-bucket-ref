@@ -1,0 +1,110 @@
+on:
+  workflow_call:
+    outputs:
+      version:
+        description: Version
+        value: ${{ jobs.lint.outputs.version }}
+
+jobs:
+  lint:
+    name: Linter
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache Python and its deps
+        uses: actions/cache@v4
+        with:
+          key: ${{ runner.os }}-python-3.11-${{ hashFiles('requirements/*.txt') }}
+          path: ${{ env.pythonLocation }}
+
+      - name: Cache pre-commit hooks
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: ${{ runner.os }}-pre-commit-python-3.11-${{ hashFiles('.pre-commit-config.yaml') }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install -U pip
+          make setup
+
+      - name: Run linters
+        run: |
+          echo Linting ${{ github.event.pull_request.head.sha || github.sha }}
+          make lint
+
+      - name: Save the package version
+        id: version
+        run: |
+          echo "version=$(python setup.py --version)" >> $GITHUB_OUTPUT
+
+  test:
+    name: Run test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache Python and its deps
+        uses: actions/cache@v4
+        with:
+          key: ${{ runner.os }}-python-3.11-${{ hashFiles('requirements/*.txt') }}
+          path: ${{ env.pythonLocation }}
+
+      - name: Cache pre-commit hooks
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: ${{ runner.os }}-pre-commit-python-3.11-${{ hashFiles('.pre-commit-config.yaml') }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install -U pip
+          make setup
+
+      - name: Configure Neu.ro CLI
+        env:
+          NEURO_TOKEN: ${{ secrets.COOKIECUTTER_TEST_E2E_TOKEN }}
+          NEURO_STAGING_URL: ${{ secrets.NEURO_STAGING_URL }}
+        run: |
+          apolo config login-with-token ${{ env.NEURO_TOKEN }} ${{ env.NEURO_STAGING_URL }}
+          apolo config switch-cluster onprem-poc
+
+      - name: Run tests
+        env:
+          WANDB_API_KEY: ${{ secrets.WANDB_API_KEY }}
+        run: |
+          make test
+
+  check:
+    name: Check
+    needs:
+      - lint
+      - test
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Decide whether the needed jobs succeeded or failed
+        uses: re-actors/alls-green@release/v1
+        with:
+          jobs: ${{ toJSON(needs) }}
