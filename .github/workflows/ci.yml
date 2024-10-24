@@ -6,118 +6,47 @@ on:
     tags: [v*]
   pull_request:
     branches: [master]
-  pull_request_target:
-    branches: [master]
 
 jobs:
-  lint:
-    if: |
-      (github.event_name != 'pull_request_target' && github.actor != 'dependabot[bot]') ||
-      (github.event_name == 'pull_request_target' && github.actor == 'dependabot[bot]')
-    name: Linter
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-    steps:
-      - name: Checkout commit
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-
-      - name: Setup Python 3.11
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Cache Python and its deps
-        uses: actions/cache@v4
-        with:
-          key: ${{ runner.os }}-python-3.11-${{ hashFiles('requirements/*.txt') }}
-          path: ${{ env.pythonLocation }}
-
-      - name: Cache pre-commit hooks
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pre-commit
-          key: ${{ runner.os }}-pre-commit-python-3.11-${{ hashFiles('.pre-commit-config.yaml') }}
-
-      - name: Install dependencies
-        run: |
-          python -m pip install -U pip
-          make setup
-
-      - name: Run linters
-        run: |
-          echo Linting ${{ github.event.pull_request.head.sha || github.sha }}
-          make lint
-
-      - name: Save the package version
-        id: version
-        run: |
-          echo "version=$(python setup.py --version)" >> $GITHUB_OUTPUT
-
   test:
-    if: |
-      (github.event_name != 'pull_request_target' && github.actor != 'dependabot[bot]') ||
-      (github.event_name == 'pull_request_target' && github.actor == 'dependabot[bot]')
-    name: Run test
+    name: All checks are passed
+    uses: ./.github/workflows/test.yaml
+
+  approve:
+    name: Approve bot PR
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    if: endsWith(github.actor, '[bot]')
+    needs: test
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
-      - name: Checkout commit
+      - name: Checkout
         uses: actions/checkout@v4
+      - name: metadata
+        id: metadata
+        if: github.actor == 'dependabot[bot]'
+        uses: dependabot/fetch-metadata@v2
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
-
-      - name: Setup Python 3.11
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Cache Python and its deps
-        uses: actions/cache@v4
-        with:
-          key: ${{ runner.os }}-python-3.11-${{ hashFiles('requirements/*.txt') }}
-          path: ${{ env.pythonLocation }}
-
-      - name: Cache pre-commit hooks
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pre-commit
-          key: ${{ runner.os }}-pre-commit-python-3.11-${{ hashFiles('.pre-commit-config.yaml') }}
-
-      - name: Install dependencies
-        run: |
-          python -m pip install -U pip
-          make setup
-
-      - name: Configure Neu.ro CLI
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Enable auto-merge for bot PRs
+        run: gh pr merge --auto --squash --delete-branch "$PR_URL"
         env:
-          NEURO_TOKEN: ${{ secrets.COOKIECUTTER_TEST_E2E_TOKEN }}
-          NEURO_STAGING_URL: ${{ secrets.NEURO_STAGING_URL }}
-        run: |
-          apolo config login-with-token ${{ env.NEURO_TOKEN }} ${{ env.NEURO_STAGING_URL }}
-          apolo config switch-cluster onprem-poc
-
-      - name: Run tests
-        env:
-          WANDB_API_KEY: ${{ secrets.WANDB_API_KEY }}
-        run: |
-          make test
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   deploy:
     name: Build and push Docker image
-    needs: [lint, test]
+    needs: test
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
     steps:
       - name: Checkout commit
         uses: actions/checkout@v4
 
       - name: Sanity check for tag and version
         run: |
-          export VERSION=${{ needs.lint.outputs.version }}
+          export VERSION=${{ needs.test.outputs.version }}
           if [ "${{ github.ref }}" != "refs/tags/v$VERSION" ]
           then
             echo "Git tag '${{ github.ref }}' differs from hard-coded package version 'v$VERSION'"
@@ -135,7 +64,7 @@ jobs:
 
       - name: Build
         env:
-          VERSION: ${{ needs.lint.outputs.version }}
+          VERSION: ${{ needs.test.outputs.version }}
           COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           docker build \
@@ -145,6 +74,6 @@ jobs:
             .
       - name: Push
         env:
-          VERSION: ${{ needs.lint.outputs.version }}
+          VERSION: ${{ needs.test.outputs.version }}
         run: |
           docker push ghcr.io/neuro-inc/wabucketref --all-tags

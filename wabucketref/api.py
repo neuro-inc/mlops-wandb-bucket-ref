@@ -130,7 +130,7 @@ class WaBucketRefAPI:
         else:
             logger.info(f"Uploading artifact {src_folder} as directory...")
             artifact.add_dir(str(src_folder))
-        wandb.log_artifact(artifact, aliases=[artifact_alias])  # type: ignore
+        wandb.log_artifact(artifact, aliases=[artifact_alias])
         self._set_apolo_flow_outputs(art_name, art_type, artifact_alias, suffix)
         return artifact_alias
 
@@ -201,7 +201,7 @@ class WaBucketRefAPI:
     ) -> Path:
         self._apolo_init_if_needed()
         self._wandb_init_if_needed()
-        artifact: wandb.Artifact = wandb.use_artifact(  # type: ignore
+        artifact: wandb.Artifact = wandb.use_artifact(
             artifact_or_name=f"{art_name}:{art_alias}", type=art_type
         )
         blob_uri = self._get_artifact_ref(artifact, art_name, art_type, art_alias)
@@ -345,6 +345,6 @@ class WaBucketRefAPI:
             uri=str(full_path),
             checksum=False,
         )
-        wandb.log_artifact(artifact, aliases=[artifact_alias])  # type: ignore
+        wandb.log_artifact(artifact, aliases=[artifact_alias])
         self._set_apolo_flow_outputs(art_name, art_type, artifact_alias, suffix)
         return artifact_alias
